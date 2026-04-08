@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">AlertaStock</string>
+    <string name="btn_atras">Atras</string>
+    <string name="content_desc_logo">Logo AlertaStock</string>
+    <string name="otp_digito_1">Digito 1</string>
+    <string name="otp_digito_2">Digito 2</string>
+    <string name="otp_digito_3">Digito 3</string>
+    <string name="otp_digito_4">Digito 4</string>
+    <string name="otp_digito_5">Digito 5</string>
+    <string name="otp_digito_6">Digito 6</string>
 </resources>

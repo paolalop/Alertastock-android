@@ -25,125 +25,68 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
+        <!-- Ícono -->
+        <ImageView
+            android:id="@+id/imgIcono"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:layout_marginTop="32dp"
+            android:background="@drawable/bg_circle_blue"
+            android:padding="16dp"
+            android:src="@android:drawable/ic_lock_idle_lock"
+            android:contentDescription="@string/content_desc_logo"
+            app:tint="@color/text_primary"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/btnAtras" />
+
         <!-- Título -->
         <TextView
             android:id="@+id/tvTitulo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
-            android:text="Crear cuenta"
+            android:layout_marginTop="20dp"
+            android:text="Nueva contrasena"
             android:textColor="@color/text_primary"
-            android:textSize="24sp"
+            android:textSize="22sp"
             android:textStyle="bold"
+            android:gravity="center"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/btnAtras" />
+            app:layout_constraintTop_toBottomOf="@id/imgIcono" />
 
+        <!-- Subtítulo -->
         <TextView
             android:id="@+id/tvSubtitulo"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="Ingresa tus datos para registrarte"
+            android:layout_marginTop="10dp"
+            android:text="Crea una contrasena segura para tu cuenta"
             android:textColor="@color/text_secondary"
             android:textSize="13sp"
+            android:gravity="center"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvTitulo" />
 
-        <!-- Campo Nombre -->
+        <!-- Campo Nueva Contraseña -->
         <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilNombre"
+            android:id="@+id/tilNuevaContrasena"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:hint="Nombre completo"
-            app:boxBackgroundColor="@color/bg_input"
-            app:boxStrokeColor="@color/border_soft"
-            app:hintTextColor="@color/text_hint"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvSubtitulo">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etNombre"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textPersonName"
-                android:textColor="@color/text_primary"
-                android:textColorHint="@color/text_hint" />
-
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- Campo Negocio -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilNegocio"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:hint="Nombre del negocio"
-            app:boxBackgroundColor="@color/bg_input"
-            app:boxStrokeColor="@color/border_soft"
-            app:hintTextColor="@color/text_hint"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tilNombre">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etNegocio"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textCapWords"
-                android:textColor="@color/text_primary"
-                android:textColorHint="@color/text_hint" />
-
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- Campo Email -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilEmail"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:hint="Correo electrónico"
-            app:boxBackgroundColor="@color/bg_input"
-            app:boxStrokeColor="@color/border_soft"
-            app:hintTextColor="@color/text_hint"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tilNegocio">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etEmail"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textEmailAddress"
-                android:textColor="@color/text_primary"
-                android:textColorHint="@color/text_hint" />
-
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- Campo Contraseña -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilContrasena"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:hint="Contraseña"
+            android:layout_marginTop="32dp"
+            android:hint="Nueva contrasena"
             app:boxBackgroundColor="@color/bg_input"
             app:boxStrokeColor="@color/border_soft"
             app:hintTextColor="@color/text_hint"
             app:passwordToggleEnabled="true"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tilEmail">
+            app:layout_constraintTop_toBottomOf="@id/tvSubtitulo">
 
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etContrasena"
+                android:id="@+id/etNuevaContrasena"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textPassword"
@@ -152,7 +95,7 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Indicador fortaleza contraseña -->
+        <!-- Indicador fortaleza -->
         <ProgressBar
             android:id="@+id/progressFortaleza"
             style="@style/Widget.AppCompat.ProgressBar.Horizontal"
@@ -165,61 +108,114 @@
             android:progressBackgroundTint="@color/border_medium"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tilContrasena" />
+            app:layout_constraintTop_toBottomOf="@id/tilNuevaContrasena" />
 
         <TextView
             android:id="@+id/tvFortaleza"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Ingresa una contraseña"
+            android:text="Ingresa una contrasena"
             android:textColor="@color/text_hint"
             android:textSize="11sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/progressFortaleza" />
 
-        <!-- Términos -->
-        <TextView
-            android:id="@+id/tvTerminos"
+        <!-- Campo Confirmar Contraseña -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilConfirmarContrasena"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:gravity="center"
-            android:text="Al registrarte aceptas los Términos y condiciones"
-            android:textColor="@color/text_secondary"
-            android:textSize="11sp"
+            android:hint="Confirmar contrasena"
+            app:boxBackgroundColor="@color/bg_input"
+            app:boxStrokeColor="@color/border_soft"
+            app:hintTextColor="@color/text_hint"
+            app:passwordToggleEnabled="true"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvFortaleza" />
+            app:layout_constraintTop_toBottomOf="@id/tvFortaleza">
 
-        <!-- Botón Registrarse -->
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etConfirmarContrasena"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPassword"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_hint" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Requisitos -->
+        <LinearLayout
+            android:id="@+id/layoutRequisitos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@color/bg_card"
+            android:orientation="vertical"
+            android:padding="12dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tilConfirmarContrasena">
+
+            <TextView
+                android:id="@+id/tvReq1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="○  Minimo 8 caracteres"
+                android:textColor="@color/text_hint"
+                android:textSize="11sp"
+                android:layout_marginBottom="6dp"/>
+
+            <TextView
+                android:id="@+id/tvReq2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="○  Al menos una letra mayuscula"
+                android:textColor="@color/text_hint"
+                android:textSize="11sp"
+                android:layout_marginBottom="6dp"/>
+
+            <TextView
+                android:id="@+id/tvReq3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="○  Al menos un numero"
+                android:textColor="@color/text_hint"
+                android:textSize="11sp"/>
+
+        </LinearLayout>
+
+        <!-- Botón Cambiar -->
         <Button
-            android:id="@+id/btnRegistrarse"
+            android:id="@+id/btnCambiar"
             android:layout_width="match_parent"
             android:layout_height="52dp"
-            android:layout_marginTop="20dp"
-            android:backgroundTint="@color/green"
-            android:text="Crear cuenta"
+            android:layout_marginTop="24dp"
+            android:backgroundTint="@color/blue"
+            android:text="Cambiar contrasena"
             android:textColor="@color/text_primary"
             android:textSize="14sp"
             android:textStyle="bold"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvTerminos" />
+            app:layout_constraintTop_toBottomOf="@id/layoutRequisitos" />
 
         <!-- Progress -->
         <ProgressBar
-            android:id="@+id/progressRegistro"
+            android:id="@+id/progressCambiar"
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:layout_marginTop="12dp"
             android:layout_marginBottom="32dp"
-            android:indeterminateTint="@color/green"
+            android:indeterminateTint="@color/blue"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/btnRegistrarse" />
+            app:layout_constraintTop_toBottomOf="@id/btnCambiar" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>
