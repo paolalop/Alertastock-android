@@ -111,4 +111,12 @@ class AuthViewModel : ViewModel() {
     fun resetearEstado() {
         _estado.value = AuthEstado.Inactivo
     }
+    // CAMBIAR CONTRASEÑA
+    fun cambiarContrasena(nuevaContrasena: String) {
+        viewModelScope.launch {
+            _estado.value = AuthEstado.Cargando
+            delay(1500)
+            _estado.value = AuthEstado.Exitoso
+        }
+    }
 }

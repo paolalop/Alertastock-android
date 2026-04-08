@@ -37,14 +37,26 @@ class NuevaContrasenaFragment : Fragment() {
             val nueva = binding.etNuevaContrasena.text.toString()
             val confirmar = binding.etConfirmarContrasena.text.toString()
 
-            if (nueva != confirmar) {
-                Snackbar.make(binding.root, "Las contrasenas no coinciden", Snackbar.LENGTH_LONG)
-                    .setBackgroundTint(requireContext().getColor(R.color.red))
-                    .setTextColor(requireContext().getColor(R.color.text_primary))
-                    .show()
+            // Validar que no estén vacíos
+            if (nueva.isBlank() || confirmar.isBlank()) {
+                mostrarError("Completa todos los campos")
                 return@setOnClickListener
             }
-            viewModel.registrar("", "", nueva)
+
+            // Validar que coincidan
+            if (nueva != confirmar) {
+                mostrarError("Las contrasenas no coinciden")
+                return@setOnClickListener
+            }
+
+            // Validar longitud mínima
+            if (nueva.length < 8) {
+                mostrarError("Minimo 8 caracteres")
+                return@setOnClickListener
+            }
+
+            // Todo bien — simular cambio exitoso
+            viewModel.cambiarContrasena(nueva)
         }
 
         viewModel.estado.observe(viewLifecycleOwner) { estado ->
@@ -60,10 +72,7 @@ class NuevaContrasenaFragment : Fragment() {
                 is AuthEstado.Error -> {
                     binding.btnCambiar.isEnabled = true
                     binding.progressCambiar.visibility = View.GONE
-                    Snackbar.make(binding.root, estado.mensaje, Snackbar.LENGTH_LONG)
-                        .setBackgroundTint(requireContext().getColor(R.color.red))
-                        .setTextColor(requireContext().getColor(R.color.text_primary))
-                        .show()
+                    mostrarError(estado.mensaje)
                     viewModel.resetearEstado()
                 }
                 else -> {
@@ -72,6 +81,13 @@ class NuevaContrasenaFragment : Fragment() {
                 }
             }
         }
+    }
+
+    private fun mostrarError(mensaje: String) {
+        Snackbar.make(binding.root, mensaje, Snackbar.LENGTH_LONG)
+            .setBackgroundTint(requireContext().getColor(R.color.red))
+            .setTextColor(requireContext().getColor(R.color.text_primary))
+            .show()
     }
 
     override fun onDestroyView() {
