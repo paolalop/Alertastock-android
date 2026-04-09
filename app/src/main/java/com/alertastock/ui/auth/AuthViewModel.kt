@@ -4,10 +4,11 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.delay
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
-// Todos los estados posibles del Login
 sealed class AuthEstado {
     object Inactivo : AuthEstado()
     object Cargando : AuthEstado()
@@ -16,6 +17,9 @@ sealed class AuthEstado {
 }
 
 class AuthViewModel : ViewModel() {
+
+    // Instancia de Firebase Auth
+    private val auth = FirebaseAuth.getInstance()
 
     private val _estado = MutableLiveData<AuthEstado>(AuthEstado.Inactivo)
     val estado: LiveData<AuthEstado> = _estado
@@ -26,74 +30,129 @@ class AuthViewModel : ViewModel() {
     private val _contrasenaValida = MutableLiveData(false)
     val contrasenaValida: LiveData<Boolean> = _contrasenaValida
 
-    // LOGIN
+    // LOGIN REAL con Firebase
     fun iniciarSesion(email: String, contrasena: String) {
         if (email.isBlank() || contrasena.isBlank()) {
             _estado.value = AuthEstado.Error("Completa todos los campos")
             return
         }
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            _estado.value = AuthEstado.Error("Correo electrónico inválido")
+            _estado.value = AuthEstado.Error("Correo electronico invalido")
             return
         }
         if (contrasena.length < 6) {
-            _estado.value = AuthEstado.Error("La contraseña debe tener al menos 6 caracteres")
+            _estado.value = AuthEstado.Error("La contrasena debe tener al menos 6 caracteres")
             return
         }
 
         viewModelScope.launch {
-            _estado.value = AuthEstado.Cargando
-            delay(1500)
-            _estado.value = AuthEstado.Exitoso
+            try {
+                _estado.value = AuthEstado.Cargando
+                auth.signInWithEmailAndPassword(email, contrasena).await()
+                _estado.value = AuthEstado.Exitoso
+            } catch (e: Exception) {
+                _estado.value = AuthEstado.Error(
+                    when {
+                        e.message?.contains("no user record") == true ->
+                            "No existe una cuenta con este correo"
+                        e.message?.contains("password is invalid") == true ->
+                            "Contrasena incorrecta"
+                        e.message?.contains("network") == true ->
+                            "Sin conexion a internet"
+                        else -> "Error al iniciar sesion"
+                    }
+                )
+            }
         }
     }
 
-    // REGISTRO
+    // REGISTRO REAL con Firebase
     fun registrar(nombre: String, email: String, contrasena: String) {
         if (nombre.isBlank() || email.isBlank() || contrasena.isBlank()) {
             _estado.value = AuthEstado.Error("Completa todos los campos")
             return
         }
         if (contrasena.length < 8) {
-            _estado.value = AuthEstado.Error("La contraseña debe tener al menos 8 caracteres")
+            _estado.value = AuthEstado.Error("La contrasena debe tener al menos 8 caracteres")
             return
         }
 
         viewModelScope.launch {
-            _estado.value = AuthEstado.Cargando
-            delay(1500)
-            _estado.value = AuthEstado.Exitoso
+            try {
+                _estado.value = AuthEstado.Cargando
+                // Crear usuario en Firebase
+                val resultado = auth.createUserWithEmailAndPassword(email, contrasena).await()
+                // Actualizar nombre del usuario
+                val perfil = com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                    .setDisplayName(nombre)
+                    .build()
+                resultado.user?.updateProfile(perfil)?.await()
+                // Enviar correo de verificación
+                resultado.user?.sendEmailVerification()?.await()
+                _estado.value = AuthEstado.Exitoso
+            } catch (e: Exception) {
+                _estado.value = AuthEstado.Error(
+                    when {
+                        e.message?.contains("email address is already") == true ->
+                            "Este correo ya tiene una cuenta registrada"
+                        e.message?.contains("network") == true ->
+                            "Sin conexion a internet"
+                        else -> "Error al crear la cuenta"
+                    }
+                )
+            }
         }
     }
 
-    // RECUPERAR CONTRASEÑA
+    // RECUPERAR CONTRASEÑA REAL con Firebase
     fun recuperarContrasena(email: String) {
         if (email.isBlank()) {
-            _estado.value = AuthEstado.Error("Ingresa tu correo electrónico")
+            _estado.value = AuthEstado.Error("Ingresa tu correo electronico")
             return
         }
 
         viewModelScope.launch {
-            _estado.value = AuthEstado.Cargando
-            delay(1000)
-            _estado.value = AuthEstado.Exitoso
+            try {
+                _estado.value = AuthEstado.Cargando
+                auth.sendPasswordResetEmail(email).await()
+                _estado.value = AuthEstado.Exitoso
+            } catch (e: Exception) {
+                _estado.value = AuthEstado.Error(
+                    when {
+                        e.message?.contains("no user record") == true ->
+                            "No existe una cuenta con este correo"
+                        e.message?.contains("network") == true ->
+                            "Sin conexion a internet"
+                        else -> "Error al enviar el correo"
+                    }
+                )
+            }
         }
     }
 
-    // VALIDAR CÓDIGO OTP
-    fun validarCodigo(codigo: String) {
-        if (codigo.length < 6) {
-            _estado.value = AuthEstado.Error("El código debe tener 6 dígitos")
-            return
-        }
-
+    // LOGIN CON GOOGLE
+    fun loginConGoogle(idToken: String) {
         viewModelScope.launch {
-            _estado.value = AuthEstado.Cargando
-            delay(800)
-            if (codigo == "123456") {
+            try {
+                _estado.value = AuthEstado.Cargando
+                val credencial = GoogleAuthProvider.getCredential(idToken, null)
+                auth.signInWithCredential(credencial).await()
                 _estado.value = AuthEstado.Exitoso
-            } else {
-                _estado.value = AuthEstado.Error("Código incorrecto")
+            } catch (e: Exception) {
+                _estado.value = AuthEstado.Error("Error al iniciar sesion con Google")
+            }
+        }
+    }
+
+    // CAMBIAR CONTRASEÑA
+    fun cambiarContrasena(nuevaContrasena: String) {
+        viewModelScope.launch {
+            try {
+                _estado.value = AuthEstado.Cargando
+                auth.currentUser?.updatePassword(nuevaContrasena)?.await()
+                _estado.value = AuthEstado.Exitoso
+            } catch (e: Exception) {
+                _estado.value = AuthEstado.Error("Error al cambiar la contrasena")
             }
         }
     }
@@ -111,12 +170,9 @@ class AuthViewModel : ViewModel() {
     fun resetearEstado() {
         _estado.value = AuthEstado.Inactivo
     }
-    // CAMBIAR CONTRASEÑA
-    fun cambiarContrasena(nuevaContrasena: String) {
-        viewModelScope.launch {
-            _estado.value = AuthEstado.Cargando
-            delay(1500)
-            _estado.value = AuthEstado.Exitoso
-        }
+
+    // Verificar si ya hay sesión activa
+    fun hayUsuarioActivo(): Boolean {
+        return auth.currentUser != null
     }
 }

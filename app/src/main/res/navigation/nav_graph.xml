@@ -43,6 +43,21 @@
             app:destination="@id/dashboardFragment"
             app:popUpTo="@id/loginFragment"
             app:popUpToInclusive="true"/>
+        <action
+            android:id="@+id/action_verificar_to_cuenta_creada"
+            app:destination="@id/cuentaCreadaFragment"/>
+    </fragment>
+
+    <!-- CUENTA CREADA -->
+    <fragment
+        android:id="@+id/cuentaCreadaFragment"
+        android:name="com.alertastock.ui.auth.CuentaCreadaFragment"
+        android:label="Cuenta creada">
+        <action
+            android:id="@+id/action_cuenta_creada_to_dashboard"
+            app:destination="@id/dashboardFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true"/>
     </fragment>
 
     <!-- OLVIDÉ CONTRASEÑA -->
@@ -82,5 +97,22 @@
         android:id="@+id/dashboardFragment"
         android:name="com.alertastock.ui.dashboard.DashboardFragment"
         android:label="Inicio"/>
+    <!-- PRODUCTOS -->
+    <fragment
+        android:id="@+id/productosFragment"
+        android:name="com.alertastock.ui.products.ProductosFragment"
+        android:label="Productos"/>
+
+    <!-- SCANNER -->
+    <fragment
+        android:id="@+id/scannerFragment"
+        android:name="com.alertastock.ui.scanner.ScannerFragment"
+        android:label="Escanear"/>
+
+    <!-- ALERTAS -->
+    <fragment
+        android:id="@+id/alertasFragment"
+        android:name="com.alertastock.ui.alerts.AlertasFragment"
+        android:label="Alertas"/>
 
 </navigation>

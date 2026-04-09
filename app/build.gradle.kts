@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android") version "2.0.21"
     id("com.google.devtools.ksp") version "2.0.21-1.0.28"
     id("androidx.navigation.safeargs.kotlin")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -53,4 +54,12 @@ dependencies {
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+
+    // Google Sign In
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
 }

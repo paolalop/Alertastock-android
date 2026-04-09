@@ -5,7 +5,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.alertastock.R
 import com.alertastock.databinding.FragmentCodigoOtpBinding
@@ -15,7 +14,6 @@ class CodigoOtpFragment : Fragment() {
 
     private var _binding: FragmentCodigoOtpBinding? = null
     private val binding get() = _binding!!
-    private val viewModel: AuthViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -34,40 +32,23 @@ class CodigoOtpFragment : Fragment() {
         }
 
         binding.btnVerificar.setOnClickListener {
-            // Junta los 6 dígitos en un solo string
             val codigo = binding.etOtp1.text.toString() +
                     binding.etOtp2.text.toString() +
                     binding.etOtp3.text.toString() +
                     binding.etOtp4.text.toString() +
                     binding.etOtp5.text.toString() +
                     binding.etOtp6.text.toString()
-            viewModel.validarCodigo(codigo)
-        }
 
-        viewModel.estado.observe(viewLifecycleOwner) { estado ->
-            when (estado) {
-                is AuthEstado.Cargando -> {
-                    binding.btnVerificar.isEnabled = false
-                    binding.progressVerificar.visibility = View.VISIBLE
-                }
-                is AuthEstado.Exitoso -> {
-                    binding.progressVerificar.visibility = View.GONE
-                    findNavController().navigate(R.id.action_otp_to_nueva_contrasena)
-                }
-                is AuthEstado.Error -> {
-                    binding.btnVerificar.isEnabled = true
-                    binding.progressVerificar.visibility = View.GONE
-                    Snackbar.make(binding.root, estado.mensaje, Snackbar.LENGTH_LONG)
-                        .setBackgroundTint(requireContext().getColor(R.color.red))
-                        .setTextColor(requireContext().getColor(R.color.text_primary))
-                        .show()
-                    viewModel.resetearEstado()
-                }
-                else -> {
-                    binding.btnVerificar.isEnabled = true
-                    binding.progressVerificar.visibility = View.GONE
-                }
+            if (codigo.length < 6) {
+                Snackbar.make(binding.root, "Ingresa los 6 digitos", Snackbar.LENGTH_LONG)
+                    .setBackgroundTint(requireContext().getColor(R.color.red))
+                    .setTextColor(requireContext().getColor(R.color.text_primary))
+                    .show()
+                return@setOnClickListener
             }
+
+            // Navegar a nueva contraseña
+            findNavController().navigate(R.id.action_otp_to_nueva_contrasena)
         }
     }
 

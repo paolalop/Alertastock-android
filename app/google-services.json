@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1094436307620",
+    "project_id": "alertastock-d0217",
+    "storage_bucket": "alertastock-d0217.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1094436307620:android:a7fd45eb5c3c1441b4dc31",
+        "android_client_info": {
+          "package_name": "com.alertastock"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1094436307620-fvcb3q7qgguoo01q5pv9ja2drsabod02.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.alertastock",
+            "certificate_hash": "66200546068974aef370da73691d31a2e65b7988"
+          }
+        },
+        {
+          "client_id": "1094436307620-cerkcljigqa8ljdsroojm20041vojfap.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCbKjU1vWoKqU0vNfKktla0j5GzqaoWlw0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1094436307620-cerkcljigqa8ljdsroojm20041vojfap.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

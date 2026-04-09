@@ -46,8 +46,20 @@ class OlvideContrasenaFragment : Fragment() {
                 }
                 is AuthEstado.Exitoso -> {
                     binding.progressEnviar.visibility = View.GONE
-                    findNavController().navigate(R.id.action_olvide_to_otp)
+                    Snackbar.make(
+                        binding.root,
+                        "Correo enviado. Revisa tu bandeja de entrada",
+                        Snackbar.LENGTH_LONG
+                    )
+                        .setBackgroundTint(requireContext().getColor(R.color.green))
+                        .setTextColor(requireContext().getColor(R.color.text_primary))
+                        .show()
+                    binding.root.postDelayed({
+                        findNavController().popBackStack()
+                    }, 2000)
+                    viewModel.resetearEstado()
                 }
+
                 is AuthEstado.Error -> {
                     binding.btnEnviar.isEnabled = true
                     binding.progressEnviar.visibility = View.GONE
