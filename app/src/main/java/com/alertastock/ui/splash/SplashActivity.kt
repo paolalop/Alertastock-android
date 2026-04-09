@@ -11,7 +11,7 @@ import com.alertastock.R
 import com.alertastock.databinding.ActivitySplashBinding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
+import com.alertastock.data.local.database.AlertaStockDatabase
 @SuppressLint("CustomSplashScreen")
 class SplashActivity : AppCompatActivity() {
 
@@ -21,6 +21,9 @@ class SplashActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivitySplashBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Inicializar Room para que cree las tablas
+        AlertaStockDatabase.getDatabase(applicationContext)
 
         // Animación de entrada para el ícono
         val fadeIn = AnimationUtils.loadAnimation(this, R.anim.fade_in)
