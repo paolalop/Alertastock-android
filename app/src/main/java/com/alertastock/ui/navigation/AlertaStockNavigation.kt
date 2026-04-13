@@ -1,0 +1,108 @@
+package com.alertastock.ui.navigation
+
+import androidx.compose.runtime.Composable
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.alertastock.ui.auth.screens.LoginScreen
+import com.alertastock.ui.auth.screens.RegistroScreen
+import com.alertastock.ui.auth.screens.OlvideContrasenaScreen
+import com.alertastock.ui.auth.screens.VerificarCorreoScreen
+import com.alertastock.ui.auth.screens.CuentaCreadaScreen
+import com.alertastock.ui.dashboard.screens.DashboardScreen
+import com.google.firebase.auth.FirebaseAuth
+
+// Rutas de navegación
+object Rutas {
+    const val LOGIN = "login"
+    const val REGISTRO = "registro"
+    const val OLVIDE_CONTRASENA = "olvide_contrasena"
+    const val VERIFICAR_CORREO = "verificar_correo"
+    const val CUENTA_CREADA = "cuenta_creada"
+    const val DASHBOARD = "dashboard"
+    const val PRODUCTOS = "productos"
+    const val SCANNER = "scanner"
+    const val ALERTAS = "alertas"
+}
+
+@Composable
+fun AlertaStockNavigation() {
+    val navController = rememberNavController()
+    val auth = FirebaseAuth.getInstance()
+
+    // Si ya hay sesión activa ir al Dashboard
+    val startDestination = if (auth.currentUser != null) {
+        Rutas.DASHBOARD
+    } else {
+        Rutas.LOGIN
+    }
+
+    NavHost(
+        navController = navController,
+        startDestination = startDestination
+    ) {
+        composable(Rutas.LOGIN) {
+            LoginScreen(
+                onLoginSuccess = {
+                    navController.navigate(Rutas.DASHBOARD) {
+                        popUpTo(Rutas.LOGIN) { inclusive = true }
+                    }
+                },
+                onRegistro = {
+                    navController.navigate(Rutas.REGISTRO)
+                },
+                onOlvideContrasena = {
+                    navController.navigate(Rutas.OLVIDE_CONTRASENA)
+                }
+            )
+        }
+        composable(Rutas.REGISTRO) {
+            RegistroScreen(
+                onRegistroExitoso = {
+                    navController.navigate(Rutas.VERIFICAR_CORREO)
+                },
+                onAtras = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable(Rutas.VERIFICAR_CORREO) {
+            VerificarCorreoScreen(
+                onVerificado = {
+                    navController.navigate(Rutas.CUENTA_CREADA)
+                },
+                onAtras = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable(Rutas.CUENTA_CREADA) {
+            CuentaCreadaScreen(
+                onIrDashboard = {
+                    navController.navigate(Rutas.DASHBOARD) {
+                        popUpTo(Rutas.LOGIN) { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable(Rutas.OLVIDE_CONTRASENA) {
+            OlvideContrasenaScreen(
+                onCorreoEnviado = {
+                    navController.popBackStack()
+                },
+                onAtras = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable(Rutas.DASHBOARD) {
+            DashboardScreen(
+                onCerrarSesion = {
+                    navController.navigate(Rutas.LOGIN) {
+                        popUpTo(Rutas.DASHBOARD) { inclusive = true }
+                    }
+                }
+            )
+        }
+    }
+}
