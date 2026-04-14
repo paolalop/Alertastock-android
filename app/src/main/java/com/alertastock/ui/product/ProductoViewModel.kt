@@ -1,6 +1,9 @@
 package com.alertastock.ui.product
 
 import android.app.Application
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.alertastock.data.local.database.AlertaStockDatabase
@@ -15,16 +18,13 @@ class ProductoViewModel(application: Application) : AndroidViewModel(application
 
     private val repository: ProductoRepository
 
-    // Expose LiveData from repository directly
+    // LiveData from repository — observed by UI
     val todosLosProductos by lazy { repository.todosLosProductos }
     val productosCriticos by lazy { repository.productosCriticos }
 
-    // Search query state
-    private val _busqueda = MutableStateFlow("")
-    val busqueda: StateFlow<String> = _busqueda.asStateFlow()
-
-    // Search results as LiveData
-    val resultadosBusqueda by lazy { repository.buscar("") }
+    // Selected product for edit screen (null = adding new)
+    var productoSeleccionado: Producto? by mutableStateOf(null)
+        private set
 
     // Loading state
     private val _cargando = MutableStateFlow(false)
@@ -69,11 +69,15 @@ class ProductoViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun setBusqueda(texto: String) {
-        _busqueda.value = texto
+    fun buscar(texto: String) = repository.buscar(texto)
+
+    fun seleccionarProducto(producto: Producto) {
+        productoSeleccionado = producto
     }
 
-    fun buscar(texto: String) = repository.buscar(texto)
+    fun limpiarSeleccion() {
+        productoSeleccionado = null
+    }
 
     fun sincronizar() = viewModelScope.launch {
         try {

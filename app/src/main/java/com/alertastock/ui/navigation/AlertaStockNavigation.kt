@@ -12,10 +12,10 @@ import com.alertastock.ui.auth.screens.VerificarCorreoScreen
 import com.alertastock.ui.auth.screens.CuentaCreadaScreen
 import com.alertastock.ui.dashboard.screens.DashboardScreen
 import com.alertastock.ui.product.ProductoViewModel
+import com.alertastock.ui.product.screen.AgregarEditarProductoScreen
 import com.alertastock.ui.product.screen.ProductosScreen
 import com.google.firebase.auth.FirebaseAuth
 
-// Rutas de navegación
 object Rutas {
     const val LOGIN = "login"
     const val REGISTRO = "registro"
@@ -24,6 +24,7 @@ object Rutas {
     const val CUENTA_CREADA = "cuenta_creada"
     const val DASHBOARD = "dashboard"
     const val PRODUCTOS = "productos"
+    const val AGREGAR_PRODUCTO = "agregar_producto"
     const val SCANNER = "scanner"
     const val ALERTAS = "alertas"
 }
@@ -33,20 +34,13 @@ fun AlertaStockNavigation() {
     val navController = rememberNavController()
     val auth = FirebaseAuth.getInstance()
 
-    // Shared ViewModel across Dashboard and Productos
+    // Shared ViewModel across all product screens
     val productoViewModel: ProductoViewModel = viewModel()
 
-    // Si ya hay sesión activa ir al Dashboard
-    val startDestination = if (auth.currentUser != null) {
-        Rutas.DASHBOARD
-    } else {
-        Rutas.LOGIN
-    }
+    val startDestination = if (auth.currentUser != null) Rutas.DASHBOARD else Rutas.LOGIN
 
-    NavHost(
-        navController = navController,
-        startDestination = startDestination
-    ) {
+    NavHost(navController = navController, startDestination = startDestination) {
+
         composable(Rutas.LOGIN) {
             LoginScreen(
                 onLoginSuccess = {
@@ -54,34 +48,25 @@ fun AlertaStockNavigation() {
                         popUpTo(Rutas.LOGIN) { inclusive = true }
                     }
                 },
-                onRegistro = {
-                    navController.navigate(Rutas.REGISTRO)
-                },
-                onOlvideContrasena = {
-                    navController.navigate(Rutas.OLVIDE_CONTRASENA)
-                }
+                onRegistro = { navController.navigate(Rutas.REGISTRO) },
+                onOlvideContrasena = { navController.navigate(Rutas.OLVIDE_CONTRASENA) }
             )
         }
+
         composable(Rutas.REGISTRO) {
             RegistroScreen(
-                onRegistroExitoso = {
-                    navController.navigate(Rutas.VERIFICAR_CORREO)
-                },
-                onAtras = {
-                    navController.popBackStack()
-                }
+                onRegistroExitoso = { navController.navigate(Rutas.VERIFICAR_CORREO) },
+                onAtras = { navController.popBackStack() }
             )
         }
+
         composable(Rutas.VERIFICAR_CORREO) {
             VerificarCorreoScreen(
-                onVerificado = {
-                    navController.navigate(Rutas.CUENTA_CREADA)
-                },
-                onAtras = {
-                    navController.popBackStack()
-                }
+                onVerificado = { navController.navigate(Rutas.CUENTA_CREADA) },
+                onAtras = { navController.popBackStack() }
             )
         }
+
         composable(Rutas.CUENTA_CREADA) {
             CuentaCreadaScreen(
                 onIrDashboard = {
@@ -91,22 +76,18 @@ fun AlertaStockNavigation() {
                 }
             )
         }
+
         composable(Rutas.OLVIDE_CONTRASENA) {
             OlvideContrasenaScreen(
-                onCorreoEnviado = {
-                    navController.popBackStack()
-                },
-                onAtras = {
-                    navController.popBackStack()
-                }
+                onCorreoEnviado = { navController.popBackStack() },
+                onAtras = { navController.popBackStack() }
             )
         }
+
         composable(Rutas.DASHBOARD) {
             DashboardScreen(
                 viewModel = productoViewModel,
-                onProductos = {
-                    navController.navigate(Rutas.PRODUCTOS)
-                },
+                onProductos = { navController.navigate(Rutas.PRODUCTOS) },
                 onCerrarSesion = {
                     navController.navigate(Rutas.LOGIN) {
                         popUpTo(Rutas.DASHBOARD) { inclusive = true }
@@ -114,18 +95,34 @@ fun AlertaStockNavigation() {
                 }
             )
         }
+
         composable(Rutas.PRODUCTOS) {
             ProductosScreen(
                 viewModel = productoViewModel,
-                onAtras = {
-                    navController.popBackStack()
-                },
+                onAtras = { navController.popBackStack() },
                 onAgregarProducto = {
-                    // navController.navigate(Rutas.AGREGAR_PRODUCTO) // coming soon
+                    navController.navigate(Rutas.AGREGAR_PRODUCTO)
                 },
                 onEditarProducto = { producto ->
-                    // navController.navigate("${Rutas.EDITAR_PRODUCTO}/${producto.id}") // coming soon
+                    productoViewModel.seleccionarProducto(producto)
+                    navController.navigate(Rutas.AGREGAR_PRODUCTO)
                 }
+            )
+        }
+
+        composable(Rutas.AGREGAR_PRODUCTO) {
+            val productoEditar = productoViewModel.productoSeleccionado
+            AgregarEditarProductoScreen(
+                productoExistente = productoEditar,
+                onGuardado = {
+                    productoViewModel.limpiarSeleccion()
+                    navController.popBackStack()
+                },
+                onAtras = {
+                    productoViewModel.limpiarSeleccion()
+                    navController.popBackStack()
+                },
+                viewModel = productoViewModel
             )
         }
     }
