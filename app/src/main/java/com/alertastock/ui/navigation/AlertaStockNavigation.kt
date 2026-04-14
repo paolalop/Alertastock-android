@@ -1,6 +1,7 @@
 package com.alertastock.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -10,6 +11,8 @@ import com.alertastock.ui.auth.screens.OlvideContrasenaScreen
 import com.alertastock.ui.auth.screens.VerificarCorreoScreen
 import com.alertastock.ui.auth.screens.CuentaCreadaScreen
 import com.alertastock.ui.dashboard.screens.DashboardScreen
+import com.alertastock.ui.product.ProductoViewModel
+import com.alertastock.ui.product.screen.ProductosScreen
 import com.google.firebase.auth.FirebaseAuth
 
 // Rutas de navegación
@@ -29,6 +32,9 @@ object Rutas {
 fun AlertaStockNavigation() {
     val navController = rememberNavController()
     val auth = FirebaseAuth.getInstance()
+
+    // Shared ViewModel across Dashboard and Productos
+    val productoViewModel: ProductoViewModel = viewModel()
 
     // Si ya hay sesión activa ir al Dashboard
     val startDestination = if (auth.currentUser != null) {
@@ -97,10 +103,28 @@ fun AlertaStockNavigation() {
         }
         composable(Rutas.DASHBOARD) {
             DashboardScreen(
+                viewModel = productoViewModel,
+                onProductos = {
+                    navController.navigate(Rutas.PRODUCTOS)
+                },
                 onCerrarSesion = {
                     navController.navigate(Rutas.LOGIN) {
                         popUpTo(Rutas.DASHBOARD) { inclusive = true }
                     }
+                }
+            )
+        }
+        composable(Rutas.PRODUCTOS) {
+            ProductosScreen(
+                viewModel = productoViewModel,
+                onAtras = {
+                    navController.popBackStack()
+                },
+                onAgregarProducto = {
+                    // navController.navigate(Rutas.AGREGAR_PRODUCTO) // coming soon
+                },
+                onEditarProducto = { producto ->
+                    // navController.navigate("${Rutas.EDITAR_PRODUCTO}/${producto.id}") // coming soon
                 }
             )
         }

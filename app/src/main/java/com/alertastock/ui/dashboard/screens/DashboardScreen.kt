@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -16,6 +17,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.alertastock.ui.product.ProductoViewModel
 import com.alertastock.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
 import java.text.SimpleDateFormat
@@ -23,13 +26,28 @@ import java.util.*
 
 @Composable
 fun DashboardScreen(
-    onCerrarSesion: () -> Unit
+    onCerrarSesion: () -> Unit,
+    onProductos: () -> Unit = {},
+    onEscanear: () -> Unit = {},
+    onAlertas: () -> Unit = {},
+    onConfigurar: () -> Unit = {},
+    viewModel: ProductoViewModel = viewModel()
 ) {
     val auth = FirebaseAuth.getInstance()
     val usuario = auth.currentUser
     val nombre = usuario?.displayName?.split(" ")?.firstOrNull()
         ?: usuario?.email?.substringBefore("@")
         ?: "Usuario"
+
+    // Observe real data from Room via ViewModel
+    val todosLosProductos by viewModel.todosLosProductos.observeAsState(emptyList())
+    val productosCriticos by viewModel.productosCriticos.observeAsState(emptyList())
+
+    // Derived stats
+    val totalProductos = todosLosProductos.size
+    val criticos = productosCriticos.size
+    val porVencer = todosLosProductos.count { it.fechaVencimiento.isNotEmpty() }
+    val enBuenEstado = todosLosProductos.count { it.stockActual > it.stockMinimo }
 
     // Saludo según hora
     val hora = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
@@ -54,16 +72,9 @@ fun DashboardScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    Brush.linearGradient(
-                        colors = listOf(BlueDark, Blue)
-                    )
+                    Brush.linearGradient(colors = listOf(BlueDark, Blue))
                 )
-                .padding(
-                    start = 20.dp,
-                    end = 20.dp,
-                    top = 48.dp,
-                    bottom = 20.dp
-                )
+                .padding(start = 20.dp, end = 20.dp, top = 48.dp, bottom = 20.dp)
         ) {
             Column {
                 Row(
@@ -86,9 +97,7 @@ fun DashboardScreen(
                         )
                     }
 
-                    // Avatar + cerrar sesión
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Cerrar sesión
                         IconButton(
                             onClick = {
                                 auth.signOut()
@@ -102,8 +111,6 @@ fun DashboardScreen(
                                 modifier = Modifier.size(22.dp)
                             )
                         }
-
-                        // Avatar
                         Card(
                             modifier = Modifier.size(44.dp),
                             shape = RoundedCornerShape(22.dp),
@@ -135,29 +142,23 @@ fun DashboardScreen(
             fontWeight = FontWeight.Bold,
             color = TextSecondary,
             letterSpacing = 1.sp,
-            modifier = Modifier.padding(
-                start = 20.dp,
-                top = 20.dp,
-                bottom = 10.dp
-            )
+            modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 10.dp)
         )
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             TarjetaEstadistica(
                 emoji = "📦",
-                valor = "0",
+                valor = totalProductos.toString(),
                 etiqueta = "Productos totales",
                 color = Blue,
                 modifier = Modifier.weight(1f)
             )
             TarjetaEstadistica(
                 emoji = "⚠️",
-                valor = "0",
+                valor = criticos.toString(),
                 etiqueta = "Por agotarse",
                 color = Red,
                 modifier = Modifier.weight(1f)
@@ -167,21 +168,19 @@ fun DashboardScreen(
         Spacer(modifier = Modifier.height(10.dp))
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             TarjetaEstadistica(
                 emoji = "📅",
-                valor = "0",
+                valor = porVencer.toString(),
                 etiqueta = "Por vencer",
                 color = Yellow,
                 modifier = Modifier.weight(1f)
             )
             TarjetaEstadistica(
                 emoji = "✅",
-                valor = "0",
+                valor = enBuenEstado.toString(),
                 etiqueta = "En buen estado",
                 color = Green,
                 modifier = Modifier.weight(1f)
@@ -195,17 +194,11 @@ fun DashboardScreen(
             fontWeight = FontWeight.Bold,
             color = TextSecondary,
             letterSpacing = 1.sp,
-            modifier = Modifier.padding(
-                start = 20.dp,
-                top = 20.dp,
-                bottom = 10.dp
-            )
+            modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 10.dp)
         )
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             AccesoRapido(
@@ -213,32 +206,32 @@ fun DashboardScreen(
                 label = "Productos",
                 color = Blue,
                 modifier = Modifier.weight(1f),
-                onClick = {}
+                onClick = onProductos           // ✅ now wired
             )
             AccesoRapido(
                 emoji = "📷",
                 label = "Escanear",
                 color = Green,
                 modifier = Modifier.weight(1f),
-                onClick = {}
+                onClick = onEscanear
             )
             AccesoRapido(
                 emoji = "🔔",
                 label = "Alertas",
                 color = Red,
                 modifier = Modifier.weight(1f),
-                onClick = {}
+                onClick = onAlertas
             )
             AccesoRapido(
                 emoji = "⚙️",
                 label = "Configurar",
                 color = Yellow,
                 modifier = Modifier.weight(1f),
-                onClick = {}
+                onClick = onConfigurar
             )
         }
 
-        Spacer(modifier = Modifier.height(80.dp))
+        Spacer(modifier = Modifier.height(40.dp))
     }
 }
 
@@ -259,29 +252,15 @@ fun TarjetaEstadistica(
             Card(
                 modifier = Modifier.size(36.dp),
                 shape = RoundedCornerShape(10.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = color.copy(alpha = 0.15f)
-                )
+                colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.15f))
             ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(text = emoji, fontSize = 16.sp)
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = valor,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
-            Text(
-                text = etiqueta,
-                fontSize = 11.sp,
-                color = TextSecondary
-            )
+            Text(text = valor, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = color)
+            Text(text = etiqueta, fontSize = 11.sp, color = TextSecondary)
         }
     }
 }
@@ -301,22 +280,15 @@ fun AccesoRapido(
         onClick = onClick
     ) {
         Column(
-            modifier = Modifier
-                .padding(14.dp)
-                .fillMaxWidth(),
+            modifier = Modifier.padding(14.dp).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Card(
                 modifier = Modifier.size(36.dp),
                 shape = RoundedCornerShape(10.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = color.copy(alpha = 0.15f)
-                )
+                colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.15f))
             ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(text = emoji, fontSize = 16.sp)
                 }
             }
