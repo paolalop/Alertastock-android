@@ -1,9 +1,9 @@
 package com.alertastock.ui.product.screen
 
-import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,7 +25,8 @@ import com.alertastock.data.model.Producto
 import com.alertastock.ui.product.ProductoViewModel
 import com.alertastock.ui.theme.*
 
-enum class FiltroProducto { TODOS, CRITICO, BAJO }
+enum class FiltroEstado { TODOS, CRITICO, BAJO }
+enum class OrdenarPor { NOMBRE, STOCK_ASC, STOCK_DESC, VENCIMIENTO }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,42 +34,86 @@ fun ProductosScreen(
     onAtras: () -> Unit,
     onAgregarProducto: () -> Unit = {},
     onEditarProducto: (Producto) -> Unit = {},
-    viewModel: ProductoViewModel = viewModel()
+    viewModel: ProductoViewModel = viewModel(),
+    filtroInicial: String = "TODOS"     // ✅ recibe el filtro desde la navegación
 ) {
     val todosLosProductos by viewModel.todosLosProductos.observeAsState(emptyList())
     val productosCriticos by viewModel.productosCriticos.observeAsState(emptyList())
 
     var busqueda by remember { mutableStateOf("") }
-    var filtroActivo by remember { mutableStateOf(FiltroProducto.TODOS) }
-    var productoAEliminar by remember { mutableStateOf<Producto?>(null) }
+    var mostrarFiltros by remember { mutableStateOf(false) }
 
-    // Derived filter lists
+    // Filtros APLICADOS — se inicializan con el valor que vino del dashboard
+    var filtroEstadoAplicado by remember {
+        mutableStateOf(
+            when (filtroInicial) {
+                "CRITICO" -> FiltroEstado.CRITICO
+                "BAJO"    -> FiltroEstado.BAJO
+                else      -> FiltroEstado.TODOS
+            }
+        )
+    }
+    var categoriaAplicada by remember { mutableStateOf("") }
+    var ordenAplicado by remember { mutableStateOf(OrdenarPor.NOMBRE) }
+
+    // Filtros TEMPORALES — lo que el usuario toca en el sheet sin confirmar
+    var filtroEstadoTemp by remember { mutableStateOf(filtroEstadoAplicado) }
+    var categoriaTemp by remember { mutableStateOf("") }
+    var ordenTemp by remember { mutableStateOf(OrdenarPor.NOMBRE) }
+
+    // Listas derivadas
     val productosBajos = remember(todosLosProductos) {
-        todosLosProductos.filter { it.stockActual > it.stockMinimo && it.stockActual <= it.stockMinimo * 2 }
+        todosLosProductos.filter {
+            it.stockActual > it.stockMinimo && it.stockActual <= it.stockMinimo * 2
+        }
     }
 
-    val listaFiltrada = remember(busqueda, filtroActivo, todosLosProductos, productosCriticos, productosBajos) {
-        val base = when (filtroActivo) {
-            FiltroProducto.TODOS -> todosLosProductos
-            FiltroProducto.CRITICO -> productosCriticos
-            FiltroProducto.BAJO -> productosBajos
+    val categorias = remember(todosLosProductos) {
+        todosLosProductos
+            .map { it.categoria }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+    }
+
+    // Lista final con todos los filtros y orden aplicados
+    val listaFiltrada = remember(
+        busqueda, filtroEstadoAplicado, categoriaAplicada, ordenAplicado,
+        todosLosProductos, productosCriticos, productosBajos
+    ) {
+        val base = when (filtroEstadoAplicado) {
+            FiltroEstado.TODOS   -> todosLosProductos
+            FiltroEstado.CRITICO -> productosCriticos
+            FiltroEstado.BAJO    -> productosBajos
         }
-        if (busqueda.isBlank()) base
-        else base.filter {
+        val porCategoria = if (categoriaAplicada.isBlank()) base
+        else base.filter { it.categoria == categoriaAplicada }
+
+        val porBusqueda = if (busqueda.isBlank()) porCategoria
+        else porCategoria.filter {
             it.nombre.contains(busqueda, ignoreCase = true) ||
                     it.codigoBarras.contains(busqueda, ignoreCase = true) ||
                     it.categoria.contains(busqueda, ignoreCase = true)
         }
+        when (ordenAplicado) {
+            OrdenarPor.NOMBRE      -> porBusqueda.sortedBy { it.nombre.lowercase() }
+            OrdenarPor.STOCK_ASC   -> porBusqueda.sortedBy { it.stockActual }
+            OrdenarPor.STOCK_DESC  -> porBusqueda.sortedByDescending { it.stockActual }
+            OrdenarPor.VENCIMIENTO -> porBusqueda.sortedWith(
+                compareBy({ it.fechaVencimiento.isBlank() }, { it.fechaVencimiento })
+            )
+        }
     }
 
-    // Confirm delete dialog
+    val hayFiltrosSheet = categoriaAplicada.isNotBlank() || ordenAplicado != OrdenarPor.NOMBRE
+
+    // Diálogo confirmar eliminar
+    var productoAEliminar by remember { mutableStateOf<Producto?>(null) }
     productoAEliminar?.let { producto ->
         AlertDialog(
             onDismissRequest = { productoAEliminar = null },
             containerColor = BgCard,
-            title = {
-                Text("Eliminar producto", color = TextPrimary, fontWeight = FontWeight.Bold)
-            },
+            title = { Text("Eliminar producto", color = TextPrimary, fontWeight = FontWeight.Bold) },
             text = {
                 Text(
                     "¿Seguro que deseas eliminar \"${producto.nombre}\"? Esta acción no se puede deshacer.",
@@ -77,14 +122,9 @@ fun ProductosScreen(
             },
             confirmButton = {
                 Button(
-                    onClick = {
-                        viewModel.eliminar(producto)
-                        productoAEliminar = null
-                    },
+                    onClick = { viewModel.eliminar(producto); productoAEliminar = null },
                     colors = ButtonDefaults.buttonColors(containerColor = Red)
-                ) {
-                    Text("Eliminar", color = Color.White)
-                }
+                ) { Text("Eliminar", color = Color.White) }
             },
             dismissButton = {
                 TextButton(onClick = { productoAEliminar = null }) {
@@ -94,6 +134,106 @@ fun ProductosScreen(
         )
     }
 
+    // ── Bottom Sheet ──────────────────────────────────────────────────────────
+    if (mostrarFiltros) {
+        ModalBottomSheet(
+            onDismissRequest = { mostrarFiltros = false },
+            containerColor = BgCard,
+            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp)
+            ) {
+                Text(
+                    text = "Filtrar y ordenar",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    modifier = Modifier.padding(bottom = 20.dp)
+                )
+
+                // Estado
+                Text("ESTADO", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextSecondary, letterSpacing = 0.8.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    BottomSheetChip("Todos",   filtroEstadoTemp == FiltroEstado.TODOS)   { filtroEstadoTemp = FiltroEstado.TODOS }
+                    BottomSheetChip("Crítico", filtroEstadoTemp == FiltroEstado.CRITICO) { filtroEstadoTemp = FiltroEstado.CRITICO }
+                    BottomSheetChip("Bajo",    filtroEstadoTemp == FiltroEstado.BAJO)    { filtroEstadoTemp = FiltroEstado.BAJO }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Categoría
+                Text("CATEGORÍA", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextSecondary, letterSpacing = 0.8.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+                if (categorias.isEmpty()) {
+                    Text(text = "No hay categorías aún", fontSize = 13.sp, color = TextHint)
+                } else {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(categorias) { categoria ->
+                            BottomSheetChip(
+                                texto = categoria,
+                                activo = categoriaTemp == categoria,
+                                onClick = { categoriaTemp = if (categoriaTemp == categoria) "" else categoria }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Ordenar por
+                Text("ORDENAR POR", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextSecondary, letterSpacing = 0.8.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    BottomSheetChip("Nombre",  ordenTemp == OrdenarPor.NOMBRE)      { ordenTemp = OrdenarPor.NOMBRE }
+                    BottomSheetChip("Stock ↑", ordenTemp == OrdenarPor.STOCK_ASC)   { ordenTemp = OrdenarPor.STOCK_ASC }
+                    BottomSheetChip("Stock ↓", ordenTemp == OrdenarPor.STOCK_DESC)  { ordenTemp = OrdenarPor.STOCK_DESC }
+                    BottomSheetChip("Venc.",   ordenTemp == OrdenarPor.VENCIMIENTO) { ordenTemp = OrdenarPor.VENCIMIENTO }
+                }
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                Button(
+                    onClick = {
+                        filtroEstadoAplicado = filtroEstadoTemp
+                        categoriaAplicada = categoriaTemp
+                        ordenAplicado = ordenTemp
+                        mostrarFiltros = false
+                    },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Blue)
+                ) {
+                    Text("Aplicar filtros", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        filtroEstadoTemp = FiltroEstado.TODOS
+                        categoriaTemp = ""
+                        ordenTemp = OrdenarPor.NOMBRE
+                        filtroEstadoAplicado = FiltroEstado.TODOS
+                        categoriaAplicada = ""
+                        ordenAplicado = OrdenarPor.NOMBRE
+                        mostrarFiltros = false
+                    },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
+                ) {
+                    Text("Limpiar filtros", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+
+    // ── Pantalla principal ────────────────────────────────────────────────────
     Scaffold(
         containerColor = BgScreen,
         floatingActionButton = {
@@ -114,22 +254,16 @@ fun ProductosScreen(
                 .background(BgScreen)
                 .padding(paddingValues)
         ) {
-            // HEADER
+            // Header
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(BgCard)
                     .padding(start = 8.dp, end = 20.dp, top = 48.dp, bottom = 16.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onAtras) {
-                        Icon(
-                            Icons.Default.ArrowBack,
-                            contentDescription = "Atrás",
-                            tint = TextPrimary
-                        )
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Atrás", tint = TextPrimary)
                     }
                     Text(
                         text = "Inventario",
@@ -138,21 +272,37 @@ fun ProductosScreen(
                         color = TextPrimary,
                         modifier = Modifier.weight(1f)
                     )
-                    // Filter icon
-                    IconButton(
-                        onClick = { /* future: sort options */ }
-                    ) {
-                        Icon(
-                            Icons.Default.FilterList,
-                            contentDescription = "Filtrar",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(22.dp)
-                        )
+                    Box {
+                        IconButton(
+                            onClick = {
+                                filtroEstadoTemp = filtroEstadoAplicado
+                                categoriaTemp = categoriaAplicada
+                                ordenTemp = ordenAplicado
+                                mostrarFiltros = true
+                            }
+                        ) {
+                            Icon(
+                                Icons.Default.FilterList,
+                                contentDescription = "Filtrar",
+                                tint = if (hayFiltrosSheet) Blue else TextSecondary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        if (hayFiltrosSheet) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(Blue)
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = (-6).dp, y = 6.dp)
+                            )
+                        }
                     }
                 }
             }
 
-            // SEARCH BAR
+            // Barra de búsqueda
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -162,12 +312,8 @@ fun ProductosScreen(
                     value = busqueda,
                     onValueChange = { busqueda = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = {
-                        Text("Buscar producto...", color = TextHint)
-                    },
-                    leadingIcon = {
-                        Icon(Icons.Default.Search, contentDescription = null, tint = TextHint)
-                    },
+                    placeholder = { Text("Buscar producto...", color = TextHint) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextHint) },
                     trailingIcon = {
                         if (busqueda.isNotEmpty()) {
                             IconButton(onClick = { busqueda = "" }) {
@@ -189,57 +335,63 @@ fun ProductosScreen(
                 )
             }
 
-            // FILTER TABS
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+            // Chips de acceso rápido por estado
+            LazyRow(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                FiltroChip(
-                    texto = "Todos (${todosLosProductos.size})",
-                    activo = filtroActivo == FiltroProducto.TODOS,
-                    color = Blue,
-                    onClick = { filtroActivo = FiltroProducto.TODOS }
-                )
-                FiltroChip(
-                    texto = "Crítico (${productosCriticos.size})",
-                    activo = filtroActivo == FiltroProducto.CRITICO,
-                    color = Red,
-                    onClick = { filtroActivo = FiltroProducto.CRITICO }
-                )
-                FiltroChip(
-                    texto = "Bajo (${productosBajos.size})",
-                    activo = filtroActivo == FiltroProducto.BAJO,
-                    color = Yellow,
-                    onClick = { filtroActivo = FiltroProducto.BAJO }
-                )
+                item {
+                    FiltroChipRapido(
+                        texto = "Todos (${todosLosProductos.size})",
+                        activo = filtroEstadoAplicado == FiltroEstado.TODOS,
+                        color = Blue,
+                        onClick = { filtroEstadoAplicado = FiltroEstado.TODOS }
+                    )
+                }
+                item {
+                    FiltroChipRapido(
+                        texto = "Crítico (${productosCriticos.size})",
+                        activo = filtroEstadoAplicado == FiltroEstado.CRITICO,
+                        color = Red,
+                        onClick = { filtroEstadoAplicado = FiltroEstado.CRITICO }
+                    )
+                }
+                item {
+                    FiltroChipRapido(
+                        texto = "Bajo (${productosBajos.size})",
+                        activo = filtroEstadoAplicado == FiltroEstado.BAJO,
+                        color = Yellow,
+                        onClick = { filtroEstadoAplicado = FiltroEstado.BAJO }
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // PRODUCT LIST
+            Text(
+                text = "${listaFiltrada.size} productos",
+                fontSize = 12.sp,
+                color = TextHint,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Lista de productos
             if (listaFiltrada.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(text = "📦", fontSize = 48.sp)
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = if (busqueda.isNotEmpty()) "Sin resultados para \"$busqueda\""
-                            else "No hay productos aún",
+                            else "No hay productos en este filtro",
                             color = TextSecondary,
                             fontSize = 15.sp
                         )
-                        if (busqueda.isEmpty()) {
+                        if (busqueda.isEmpty() && filtroEstadoAplicado == FiltroEstado.TODOS && !hayFiltrosSheet) {
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Toca + para agregar tu primer producto",
-                                color = TextHint,
-                                fontSize = 13.sp
-                            )
+                            Text("Toca + para agregar tu primer producto", color = TextHint, fontSize = 13.sp)
                         }
                     }
                 }
@@ -263,8 +415,9 @@ fun ProductosScreen(
     }
 }
 
+// ── Chip de acceso rápido ──────────────────────────────────────────────────────
 @Composable
-fun FiltroChip(
+fun FiltroChipRapido(
     texto: String,
     activo: Boolean,
     color: Color,
@@ -289,13 +442,39 @@ fun FiltroChip(
     }
 }
 
+// ── Chip del bottom sheet ──────────────────────────────────────────────────────
+@Composable
+fun BottomSheetChip(
+    texto: String,
+    activo: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        color = if (activo) Blue.copy(alpha = 0.15f) else Color.Transparent,
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.5.dp,
+            color = if (activo) Blue else BorderMedium
+        )
+    ) {
+        Text(
+            text = texto,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            fontSize = 13.sp,
+            fontWeight = if (activo) FontWeight.Bold else FontWeight.Normal,
+            color = if (activo) Blue else TextSecondary
+        )
+    }
+}
+
+// ── Tarjeta de producto ────────────────────────────────────────────────────────
 @Composable
 fun ProductoCard(
     producto: Producto,
     onEditar: () -> Unit,
     onEliminar: () -> Unit
 ) {
-    // Stock status color
     val stockColor = when {
         producto.stockActual <= producto.stockMinimo -> Red
         producto.stockActual <= producto.stockMinimo * 2 -> Yellow
@@ -317,7 +496,6 @@ fun ProductoCard(
                 .padding(start = 14.dp, top = 14.dp, bottom = 14.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Emoji avatar
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -330,7 +508,6 @@ fun ProductoCard(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Product info
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = producto.nombre,
@@ -346,9 +523,14 @@ fun ProductoCard(
                     fontSize = 12.sp,
                     color = TextSecondary
                 )
+                if (producto.fechaVencimiento.isNotBlank()) {
+                    Text(
+                        text = "Vence: ${producto.fechaVencimiento}",
+                        fontSize = 11.sp,
+                        color = if (producto.estaVenciendo) Color(0xFFFB8C00) else TextSecondary
+                    )
+                }
                 Spacer(modifier = Modifier.height(6.dp))
-
-                // Progress bar
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -368,7 +550,6 @@ fun ProductoCard(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Stock dot indicator
             Box(
                 modifier = Modifier
                     .size(8.dp)
@@ -378,42 +559,26 @@ fun ProductoCard(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Action buttons
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                // Edit button
                 Button(
                     onClick = onEditar,
-                    modifier = Modifier
-                        .width(72.dp)
-                        .height(34.dp),
+                    modifier = Modifier.width(72.dp).height(34.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Blue),
                     shape = RoundedCornerShape(10.dp),
                     contentPadding = PaddingValues(0.dp)
                 ) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = "Editar",
-                        modifier = Modifier.size(14.dp)
-                    )
+                    Icon(Icons.Default.Edit, contentDescription = "Editar", modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Editar", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
-
-                // Delete button
                 Button(
                     onClick = onEliminar,
-                    modifier = Modifier
-                        .width(72.dp)
-                        .height(34.dp),
+                    modifier = Modifier.width(72.dp).height(34.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Red),
                     shape = RoundedCornerShape(10.dp),
                     contentPadding = PaddingValues(0.dp)
                 ) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Borrar",
-                        modifier = Modifier.size(14.dp)
-                    )
+                    Icon(Icons.Default.Delete, contentDescription = "Borrar", modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Borrar", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }

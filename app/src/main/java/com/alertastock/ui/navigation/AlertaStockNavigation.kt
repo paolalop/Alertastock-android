@@ -2,9 +2,11 @@ package com.alertastock.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.alertastock.ui.auth.screens.LoginScreen
 import com.alertastock.ui.auth.screens.RegistroScreen
 import com.alertastock.ui.auth.screens.OlvideContrasenaScreen
@@ -34,7 +36,6 @@ fun AlertaStockNavigation() {
     val navController = rememberNavController()
     val auth = FirebaseAuth.getInstance()
 
-    // Shared ViewModel across all product screens
     val productoViewModel: ProductoViewModel = viewModel()
 
     val startDestination = if (auth.currentUser != null) Rutas.DASHBOARD else Rutas.LOGIN
@@ -87,7 +88,18 @@ fun AlertaStockNavigation() {
         composable(Rutas.DASHBOARD) {
             DashboardScreen(
                 viewModel = productoViewModel,
-                onProductos = { navController.navigate(Rutas.PRODUCTOS) },
+                // Botón "Productos" del acceso rápido → muestra todos
+                onProductos = {
+                    navController.navigate("${Rutas.PRODUCTOS}?filtro=TODOS")
+                },
+                // Tarjeta "Por agotarse" → abre con filtro Crítico
+                onProductosCriticos = {
+                    navController.navigate("${Rutas.PRODUCTOS}?filtro=CRITICO")
+                },
+                // Tarjeta "Por vencer" → abre con filtro Bajo
+                onProductosBajos = {
+                    navController.navigate("${Rutas.PRODUCTOS}?filtro=BAJO")
+                },
                 onCerrarSesion = {
                     navController.navigate(Rutas.LOGIN) {
                         popUpTo(Rutas.DASHBOARD) { inclusive = true }
@@ -96,13 +108,24 @@ fun AlertaStockNavigation() {
             )
         }
 
-        composable(Rutas.PRODUCTOS) {
+        // La ruta ahora acepta un parámetro opcional "filtro"
+        // Si no se pasa, el valor por defecto es "TODOS"
+        composable(
+            route = "${Rutas.PRODUCTOS}?filtro={filtro}",
+            arguments = listOf(
+                navArgument("filtro") {
+                    type = NavType.StringType
+                    defaultValue = "TODOS"
+                }
+            )
+        ) { backStackEntry ->
+            // Leemos el parámetro que vino en la URL
+            val filtroInicial = backStackEntry.arguments?.getString("filtro") ?: "TODOS"
             ProductosScreen(
                 viewModel = productoViewModel,
+                filtroInicial = filtroInicial,
                 onAtras = { navController.popBackStack() },
-                onAgregarProducto = {
-                    navController.navigate(Rutas.AGREGAR_PRODUCTO)
-                },
+                onAgregarProducto = { navController.navigate(Rutas.AGREGAR_PRODUCTO) },
                 onEditarProducto = { producto ->
                     productoViewModel.seleccionarProducto(producto)
                     navController.navigate(Rutas.AGREGAR_PRODUCTO)

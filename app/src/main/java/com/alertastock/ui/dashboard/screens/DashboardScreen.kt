@@ -28,6 +28,8 @@ import java.util.*
 fun DashboardScreen(
     onCerrarSesion: () -> Unit,
     onProductos: () -> Unit = {},
+    onProductosCriticos: () -> Unit = {},   // ✅ tarjeta "Por agotarse"
+    onProductosBajos: () -> Unit = {},      // ✅ tarjeta "Por vencer"
     onEscanear: () -> Unit = {},
     onAlertas: () -> Unit = {},
     onConfigurar: () -> Unit = {},
@@ -39,17 +41,14 @@ fun DashboardScreen(
         ?: usuario?.email?.substringBefore("@")
         ?: "Usuario"
 
-    // Observe real data from Room via ViewModel
     val todosLosProductos by viewModel.todosLosProductos.observeAsState(emptyList())
     val productosCriticos by viewModel.productosCriticos.observeAsState(emptyList())
 
-    // Derived stats
     val totalProductos = todosLosProductos.size
     val criticos = productosCriticos.size
-    val porVencer = todosLosProductos.count { it.fechaVencimiento.isNotEmpty() }
-    val enBuenEstado = todosLosProductos.count { it.stockActual > it.stockMinimo }
+    val porVencer = todosLosProductos.count { it.estaVenciendo }
+    val enBuenEstado = todosLosProductos.count { it.stockActual > it.stockMinimo * 2 }
 
-    // Saludo según hora
     val hora = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
     val saludo = when {
         hora < 12 -> "Buenos días,"
@@ -57,7 +56,6 @@ fun DashboardScreen(
         else -> "Buenas noches,"
     }
 
-    // Fecha actual
     val formato = SimpleDateFormat("EEEE, d 'de' MMMM yyyy", Locale("es", "CO"))
     val fecha = formato.format(Date()).replaceFirstChar { it.uppercase() }
 
@@ -71,9 +69,7 @@ fun DashboardScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(colors = listOf(BlueDark, Blue))
-                )
+                .background(Brush.linearGradient(colors = listOf(BlueDark, Blue)))
                 .padding(start = 20.dp, end = 20.dp, top = 48.dp, bottom = 20.dp)
         ) {
             Column {
@@ -96,13 +92,9 @@ fun DashboardScreen(
                             modifier = Modifier.padding(top = 2.dp)
                         )
                     }
-
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
-                            onClick = {
-                                auth.signOut()
-                                onCerrarSesion()
-                            }
+                            onClick = { auth.signOut(); onCerrarSesion() }
                         ) {
                             Icon(
                                 Icons.Default.ExitToApp,
@@ -154,14 +146,16 @@ fun DashboardScreen(
                 valor = totalProductos.toString(),
                 etiqueta = "Productos totales",
                 color = Blue,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = onProductos               // → abre todos
             )
             TarjetaEstadistica(
                 emoji = "⚠️",
                 valor = criticos.toString(),
                 etiqueta = "Por agotarse",
                 color = Red,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = onProductosCriticos       // → abre con filtro Crítico
             )
         }
 
@@ -176,14 +170,16 @@ fun DashboardScreen(
                 valor = porVencer.toString(),
                 etiqueta = "Por vencer",
                 color = Yellow,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = onProductosBajos          // → abre con filtro Bajo
             )
             TarjetaEstadistica(
                 emoji = "✅",
                 valor = enBuenEstado.toString(),
                 etiqueta = "En buen estado",
                 color = Green,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = onProductos               // → abre todos
             )
         }
 
@@ -206,7 +202,7 @@ fun DashboardScreen(
                 label = "Productos",
                 color = Blue,
                 modifier = Modifier.weight(1f),
-                onClick = onProductos           // ✅ now wired
+                onClick = onProductos
             )
             AccesoRapido(
                 emoji = "📷",
@@ -235,16 +231,19 @@ fun DashboardScreen(
     }
 }
 
+// ── Tarjeta de estadística (ahora es tappable) ────────────────────────────────
 @Composable
 fun TarjetaEstadistica(
     emoji: String,
     valor: String,
     etiqueta: String,
     color: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
 ) {
     Card(
         modifier = modifier,
+        onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = BgCard),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -265,6 +264,7 @@ fun TarjetaEstadistica(
     }
 }
 
+// ── Acceso rápido ─────────────────────────────────────────────────────────────
 @Composable
 fun AccesoRapido(
     emoji: String,
@@ -280,7 +280,9 @@ fun AccesoRapido(
         onClick = onClick
     ) {
         Column(
-            modifier = Modifier.padding(14.dp).fillMaxWidth(),
+            modifier = Modifier
+                .padding(14.dp)
+                .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Card(
