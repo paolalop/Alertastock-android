@@ -6,19 +6,23 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.alertastock.ui.product.ProductoViewModel
+import com.alertastock.ui.product.screen.AlertaStockBottomBar
+import com.alertastock.ui.product.screen.BottomDestination
 import com.alertastock.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
 import java.text.SimpleDateFormat
@@ -27,9 +31,10 @@ import java.util.*
 @Composable
 fun DashboardScreen(
     onCerrarSesion: () -> Unit,
+    onIrInicio: () -> Unit = {},
     onProductos: () -> Unit = {},
-    onProductosCriticos: () -> Unit = {},   // ✅ tarjeta "Por agotarse"
-    onProductosBajos: () -> Unit = {},      // ✅ tarjeta "Por vencer"
+    onProductosCriticos: () -> Unit = {},
+    onProductosBajos: () -> Unit = {},
     onEscanear: () -> Unit = {},
     onAlertas: () -> Unit = {},
     onConfigurar: () -> Unit = {},
@@ -59,179 +64,198 @@ fun DashboardScreen(
     val formato = SimpleDateFormat("EEEE, d 'de' MMMM yyyy", Locale("es", "CO"))
     val fecha = formato.format(Date()).replaceFirstChar { it.uppercase() }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(BgScreen)
-            .verticalScroll(rememberScrollState())
-    ) {
-        // HEADER
-        Box(
+    Scaffold(
+        containerColor = BgScreen,
+        bottomBar = {
+            AlertaStockBottomBar(
+                selected = BottomDestination.INICIO,
+                onInicioClick = onIrInicio,
+                onProductosClick = onProductos
+            )
+        }
+    ) { paddingValues ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(Brush.linearGradient(colors = listOf(BlueDark, Blue)))
-                .padding(start = 20.dp, end = 20.dp, top = 48.dp, bottom = 20.dp)
+                .fillMaxSize()
+                .background(BgScreen)
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
         ) {
-            Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "$saludo $nombre",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        Text(
-                            text = fecha,
-                            fontSize = 13.sp,
-                            color = Color.White.copy(alpha = 0.7f),
-                            modifier = Modifier.padding(top = 2.dp)
-                        )
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(
-                            onClick = { auth.signOut(); onCerrarSesion() }
-                        ) {
-                            Icon(
-                                Icons.Default.ExitToApp,
-                                contentDescription = "Cerrar sesion",
-                                tint = Color.White.copy(alpha = 0.8f),
-                                modifier = Modifier.size(22.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Brush.linearGradient(colors = listOf(BlueDark, Blue)))
+                    .padding(start = 20.dp, end = 20.dp, top = 48.dp, bottom = 20.dp)
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "$saludo $nombre",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = fecha,
+                                fontSize = 13.sp,
+                                color = Color.White.copy(alpha = 0.7f),
+                                modifier = Modifier.padding(top = 2.dp)
                             )
                         }
-                        Card(
-                            modifier = Modifier.size(44.dp),
-                            shape = RoundedCornerShape(22.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = Color.White.copy(alpha = 0.25f)
-                            )
-                        ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(
+                                onClick = {
+                                    auth.signOut()
+                                    onCerrarSesion()
+                                }
                             ) {
-                                Text(
-                                    text = nombre.first().uppercase(),
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                Icon(
+                                    imageVector = Icons.Default.ExitToApp,
+                                    contentDescription = "Cerrar sesión",
+                                    tint = Color.White.copy(alpha = 0.8f),
+                                    modifier = Modifier.size(22.dp)
                                 )
+                            }
+
+                            Card(
+                                modifier = Modifier.size(44.dp),
+                                shape = RoundedCornerShape(22.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color.White.copy(alpha = 0.25f)
+                                )
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = nombre.first().uppercase(),
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
+
+            Text(
+                text = "RESUMEN GENERAL",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextSecondary,
+                letterSpacing = 1.sp,
+                modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 10.dp)
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                TarjetaEstadistica(
+                    emoji = "📦",
+                    valor = totalProductos.toString(),
+                    etiqueta = "Productos totales",
+                    color = Blue,
+                    modifier = Modifier.weight(1f),
+                    onClick = onProductos
+                )
+                TarjetaEstadistica(
+                    emoji = "⚠️",
+                    valor = criticos.toString(),
+                    etiqueta = "Por agotarse",
+                    color = Red,
+                    modifier = Modifier.weight(1f),
+                    onClick = onProductosCriticos
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                TarjetaEstadistica(
+                    emoji = "📅",
+                    valor = porVencer.toString(),
+                    etiqueta = "Por vencer",
+                    color = Yellow,
+                    modifier = Modifier.weight(1f),
+                    onClick = onProductosBajos
+                )
+                TarjetaEstadistica(
+                    emoji = "✅",
+                    valor = enBuenEstado.toString(),
+                    etiqueta = "En buen estado",
+                    color = Green,
+                    modifier = Modifier.weight(1f),
+                    onClick = onProductos
+                )
+            }
+
+            Text(
+                text = "ACCESO RÁPIDO",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextSecondary,
+                letterSpacing = 1.sp,
+                modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 10.dp)
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                AccesoRapido(
+                    emoji = "📦",
+                    label = "Productos",
+                    color = Blue,
+                    modifier = Modifier.weight(1f),
+                    onClick = onProductos
+                )
+                AccesoRapido(
+                    emoji = "📷",
+                    label = "Escanear",
+                    color = Green,
+                    modifier = Modifier.weight(1f),
+                    onClick = onEscanear
+                )
+                AccesoRapido(
+                    emoji = "🔔",
+                    label = "Alertas",
+                    color = Red,
+                    modifier = Modifier.weight(1f),
+                    onClick = onAlertas
+                )
+                AccesoRapido(
+                    emoji = "⚙️",
+                    label = "Configurar",
+                    color = Yellow,
+                    modifier = Modifier.weight(1f),
+                    onClick = onConfigurar
+                )
+            }
+
+            Spacer(modifier = Modifier.height(40.dp))
         }
-
-        // RESUMEN GENERAL
-        Text(
-            text = "RESUMEN GENERAL",
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextSecondary,
-            letterSpacing = 1.sp,
-            modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 10.dp)
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            TarjetaEstadistica(
-                emoji = "📦",
-                valor = totalProductos.toString(),
-                etiqueta = "Productos totales",
-                color = Blue,
-                modifier = Modifier.weight(1f),
-                onClick = onProductos               // → abre todos
-            )
-            TarjetaEstadistica(
-                emoji = "⚠️",
-                valor = criticos.toString(),
-                etiqueta = "Por agotarse",
-                color = Red,
-                modifier = Modifier.weight(1f),
-                onClick = onProductosCriticos       // → abre con filtro Crítico
-            )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            TarjetaEstadistica(
-                emoji = "📅",
-                valor = porVencer.toString(),
-                etiqueta = "Por vencer",
-                color = Yellow,
-                modifier = Modifier.weight(1f),
-                onClick = onProductosBajos          // → abre con filtro Bajo
-            )
-            TarjetaEstadistica(
-                emoji = "✅",
-                valor = enBuenEstado.toString(),
-                etiqueta = "En buen estado",
-                color = Green,
-                modifier = Modifier.weight(1f),
-                onClick = onProductos               // → abre todos
-            )
-        }
-
-        // ACCESO RÁPIDO
-        Text(
-            text = "ACCESO RÁPIDO",
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextSecondary,
-            letterSpacing = 1.sp,
-            modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 10.dp)
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            AccesoRapido(
-                emoji = "📦",
-                label = "Productos",
-                color = Blue,
-                modifier = Modifier.weight(1f),
-                onClick = onProductos
-            )
-            AccesoRapido(
-                emoji = "📷",
-                label = "Escanear",
-                color = Green,
-                modifier = Modifier.weight(1f),
-                onClick = onEscanear
-            )
-            AccesoRapido(
-                emoji = "🔔",
-                label = "Alertas",
-                color = Red,
-                modifier = Modifier.weight(1f),
-                onClick = onAlertas
-            )
-            AccesoRapido(
-                emoji = "⚙️",
-                label = "Configurar",
-                color = Yellow,
-                modifier = Modifier.weight(1f),
-                onClick = onConfigurar
-            )
-        }
-
-        Spacer(modifier = Modifier.height(40.dp))
     }
 }
 
-// ── Tarjeta de estadística (ahora es tappable) ────────────────────────────────
 @Composable
 fun TarjetaEstadistica(
     emoji: String,
@@ -264,7 +288,6 @@ fun TarjetaEstadistica(
     }
 }
 
-// ── Acceso rápido ─────────────────────────────────────────────────────────────
 @Composable
 fun AccesoRapido(
     emoji: String,
@@ -300,7 +323,7 @@ fun AccesoRapido(
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                textAlign = TextAlign.Center
             )
         }
     }
