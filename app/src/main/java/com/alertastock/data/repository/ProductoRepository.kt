@@ -1,5 +1,6 @@
 package com.alertastock.data.repository
 
+import android.util.Log
 import com.alertastock.data.local.dao.ProductoDao
 import com.alertastock.data.model.Producto
 import com.google.firebase.auth.FirebaseAuth
@@ -8,74 +9,115 @@ import kotlinx.coroutines.tasks.await
 
 class ProductoRepository(private val productoDao: ProductoDao) {
 
-    // Instancias de Firebase
     private val firestore = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
-    // Colección de productos del usuario actual
+    // 🔥 UID seguro (SIN "unknown")
+    private fun getUid(): String {
+        return auth.currentUser?.uid
+            ?: throw IllegalStateException("No hay usuario autenticado")
+    }
+
+    // 🔥 Ruta correcta en Firebase
     private val coleccionProductos
         get() = firestore
             .collection("usuarios")
-            .document(auth.currentUser?.uid ?: "unknown")
+            .document(getUid())
             .collection("productos")
 
-    // LiveData locales — la UI los observa
+    // LiveData locales
     val todosLosProductos = productoDao.obtenerTodos()
     val productosCriticos = productoDao.obtenerCriticos()
 
     fun buscar(texto: String) = productoDao.buscar(texto)
 
-    // INSERTAR — guarda en Room y en Firestore
+    // ===============================
+    // INSERTAR
+    // ===============================
     suspend fun insertar(producto: Producto) {
-        // 1. Guardar en Room (local)
         productoDao.insertar(producto)
 
-        // 2. Guardar en Firestore (nube)
         try {
             val mapa = producto.toMap()
+            val docId = producto.codigoBarras.ifEmpty { producto.nombre }
+
             coleccionProductos
-                .document(producto.codigoBarras.ifEmpty { producto.nombre })
+                .document(docId)
                 .set(mapa)
                 .await()
+
         } catch (e: Exception) {
-            // Si falla Firestore, Room ya lo guardó
+            Log.e("ProductoRepository", "Error al guardar en Firestore", e)
         }
     }
 
-    // ACTUALIZAR — actualiza en Room y en Firestore
+    // ===============================
+    // ACTUALIZAR
+    // ===============================
     suspend fun actualizar(producto: Producto) {
         productoDao.actualizar(producto)
+
         try {
+            val docId = producto.codigoBarras.ifEmpty { producto.nombre }
+
             coleccionProductos
-                .document(producto.codigoBarras.ifEmpty { producto.nombre })
+                .document(docId)
                 .set(producto.toMap())
                 .await()
-        } catch (e: Exception) {}
+
+        } catch (e: Exception) {
+            Log.e("ProductoRepository", "Error al actualizar en Firestore", e)
+        }
     }
 
-    // ELIMINAR — elimina en Room y en Firestore
+    // ===============================
+    // ELIMINAR
+    // ===============================
     suspend fun eliminar(producto: Producto) {
         productoDao.eliminar(producto)
+
         try {
+            val docId = producto.codigoBarras.ifEmpty { producto.nombre }
+
             coleccionProductos
-                .document(producto.codigoBarras.ifEmpty { producto.nombre })
+                .document(docId)
                 .delete()
                 .await()
-        } catch (e: Exception) {}
+
+        } catch (e: Exception) {
+            Log.e("ProductoRepository", "Error al eliminar en Firestore", e)
+        }
     }
 
+    // ===============================
+    // BUSCAR POR CÓDIGO
+    // ===============================
     suspend fun buscarPorCodigo(codigo: String): Producto? {
         return productoDao.buscarPorCodigo(codigo)
     }
 
+    // ===============================
+    // DESCONTAR STOCK
+    // ===============================
     suspend fun descontarStock(id: Int, cantidad: Int) {
         productoDao.descontarStock(id, cantidad)
     }
 
-    // SINCRONIZAR — trae productos de Firestore a Room
+    // ===============================
+    // 🔥 NUEVO: actualizar stock mínimo (para alertas)
+    // ===============================
+    suspend fun actualizarStockMinimo(producto: Producto, nuevoStockMinimo: Int) {
+        val productoActualizado = producto.copy(stockMinimo = nuevoStockMinimo)
+        actualizar(productoActualizado)
+    }
+
+    // ===============================
+    // SINCRONIZAR DESDE FIRESTORE
+    // ===============================
     suspend fun sincronizarDesdeFirestore() {
         try {
             val documentos = coleccionProductos.get().await()
+
             for (doc in documentos) {
                 val producto = Producto(
                     nombre = doc.getString("nombre") ?: "",
@@ -88,13 +130,19 @@ class ProductoRepository(private val productoDao: ProductoDao) {
                     fechaVencimiento = doc.getString("fechaVencimiento") ?: "",
                     emoji = doc.getString("emoji") ?: "📦"
                 )
+
                 productoDao.insertar(producto)
             }
-        } catch (e: Exception) {}
+
+        } catch (e: Exception) {
+            Log.e("ProductoRepository", "Error al sincronizar", e)
+        }
     }
 }
 
-// Extensión para convertir Producto a Map para Firestore
+// ===============================
+// EXTENSIÓN PARA FIRESTORE
+// ===============================
 fun Producto.toMap(): Map<String, Any> = mapOf(
     "nombre" to nombre,
     "categoria" to categoria,

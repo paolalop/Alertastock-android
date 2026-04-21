@@ -3,11 +3,15 @@ package com.alertastock.ui.product.screen
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
@@ -15,6 +19,9 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,37 +38,22 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.alertastock.data.model.Producto
 import com.alertastock.ui.product.ProductoViewModel
 import com.alertastock.ui.theme.*
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.foundation.layout.height
-import androidx.compose.material.icons.filled.Inventory
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import com.alertastock.ui.theme.BgCard
-import com.alertastock.ui.theme.Blue
-import com.alertastock.ui.theme.TextHint
-import com.alertastock.ui.theme.TextPrimary
-
 
 enum class FiltroEstado { TODOS, CRITICO, BAJO }
 enum class OrdenarPor { NOMBRE, STOCK_ASC, STOCK_DESC, VENCIMIENTO }
 
 enum class BottomDestination {
     INICIO,
-    PRODUCTOS
+    PRODUCTOS,
+    ALERTAS
 }
 
 @Composable
 fun AlertaStockBottomBar(
     selected: BottomDestination,
     onInicioClick: () -> Unit,
-    onProductosClick: () -> Unit
+    onProductosClick: () -> Unit,
+    onAlertasClick: () -> Unit
 ) {
     NavigationBar(
         containerColor = BgCard,
@@ -91,6 +83,18 @@ fun AlertaStockBottomBar(
             },
             label = { Text("Productos") }
         )
+
+        NavigationBarItem(
+            selected = selected == BottomDestination.ALERTAS,
+            onClick = onAlertasClick,
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Notifications,
+                    contentDescription = "Alertas"
+                )
+            },
+            label = { Text("Alertas") }
+        )
     }
 }
 
@@ -102,9 +106,9 @@ fun ProductosScreen(
     onEditarProducto: (Producto) -> Unit = {},
     onIrInicio: () -> Unit = {},
     onIrProductos: () -> Unit = {},
+    onIrAlertas: () -> Unit = {},
     viewModel: ProductoViewModel = viewModel(),
     filtroInicial: String = "TODOS"
-
 ) {
     val todosLosProductos by viewModel.todosLosProductos.observeAsState(emptyList())
     val productosCriticos by viewModel.productosCriticos.observeAsState(emptyList())
@@ -261,7 +265,8 @@ fun ProductosScreen(
             AlertaStockBottomBar(
                 selected = BottomDestination.PRODUCTOS,
                 onInicioClick = onIrInicio,
-                onProductosClick = onIrProductos
+                onProductosClick = onIrProductos,
+                onAlertasClick = onIrAlertas
             )
         },
         floatingActionButton = {

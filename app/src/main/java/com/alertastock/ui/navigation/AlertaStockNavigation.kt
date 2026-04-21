@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.alertastock.ui.alert.screen.AlertasScreen
 import com.alertastock.ui.auth.screens.CuentaCreadaScreen
 import com.alertastock.ui.auth.screens.LoginScreen
 import com.alertastock.ui.auth.screens.OlvideContrasenaScreen
@@ -38,9 +39,16 @@ fun AlertaStockNavigation() {
 
     val productoViewModel: ProductoViewModel = viewModel()
 
-    val startDestination = if (auth.currentUser != null) Rutas.DASHBOARD else Rutas.LOGIN
+    val startDestination = if (auth.currentUser != null) {
+        Rutas.DASHBOARD
+    } else {
+        Rutas.LOGIN
+    }
 
-    NavHost(navController = navController, startDestination = startDestination) {
+    NavHost(
+        navController = navController,
+        startDestination = startDestination
+    ) {
 
         composable(Rutas.LOGIN) {
             LoginScreen(
@@ -49,22 +57,34 @@ fun AlertaStockNavigation() {
                         popUpTo(Rutas.LOGIN) { inclusive = true }
                     }
                 },
-                onRegistro = { navController.navigate(Rutas.REGISTRO) },
-                onOlvideContrasena = { navController.navigate(Rutas.OLVIDE_CONTRASENA) }
+                onRegistro = {
+                    navController.navigate(Rutas.REGISTRO)
+                },
+                onOlvideContrasena = {
+                    navController.navigate(Rutas.OLVIDE_CONTRASENA)
+                }
             )
         }
 
         composable(Rutas.REGISTRO) {
             RegistroScreen(
-                onRegistroExitoso = { navController.navigate(Rutas.VERIFICAR_CORREO) },
-                onAtras = { navController.popBackStack() }
+                onRegistroExitoso = {
+                    navController.navigate(Rutas.VERIFICAR_CORREO)
+                },
+                onAtras = {
+                    navController.popBackStack()
+                }
             )
         }
 
         composable(Rutas.VERIFICAR_CORREO) {
             VerificarCorreoScreen(
-                onVerificado = { navController.navigate(Rutas.CUENTA_CREADA) },
-                onAtras = { navController.popBackStack() }
+                onVerificado = {
+                    navController.navigate(Rutas.CUENTA_CREADA)
+                },
+                onAtras = {
+                    navController.popBackStack()
+                }
             )
         }
 
@@ -80,8 +100,12 @@ fun AlertaStockNavigation() {
 
         composable(Rutas.OLVIDE_CONTRASENA) {
             OlvideContrasenaScreen(
-                onCorreoEnviado = { navController.popBackStack() },
-                onAtras = { navController.popBackStack() }
+                onCorreoEnviado = {
+                    navController.popBackStack()
+                },
+                onAtras = {
+                    navController.popBackStack()
+                }
             )
         }
 
@@ -105,7 +129,13 @@ fun AlertaStockNavigation() {
                 onProductosBajos = {
                     navController.navigate("${Rutas.PRODUCTOS}?filtro=BAJO")
                 },
+                onAlertas = {
+                    navController.navigate(Rutas.ALERTAS) {
+                        launchSingleTop = true
+                    }
+                },
                 onCerrarSesion = {
+                    auth.signOut()
                     navController.navigate(Rutas.LOGIN) {
                         popUpTo(Rutas.DASHBOARD) { inclusive = true }
                     }
@@ -127,8 +157,12 @@ fun AlertaStockNavigation() {
             ProductosScreen(
                 viewModel = productoViewModel,
                 filtroInicial = filtroInicial,
-                onAtras = { navController.popBackStack() },
-                onAgregarProducto = { navController.navigate(Rutas.AGREGAR_PRODUCTO) },
+                onAtras = {
+                    navController.popBackStack()
+                },
+                onAgregarProducto = {
+                    navController.navigate(Rutas.AGREGAR_PRODUCTO)
+                },
                 onEditarProducto = { producto ->
                     productoViewModel.seleccionarProducto(producto)
                     navController.navigate(Rutas.AGREGAR_PRODUCTO)
@@ -149,6 +183,7 @@ fun AlertaStockNavigation() {
 
         composable(Rutas.AGREGAR_PRODUCTO) {
             val productoEditar = productoViewModel.productoSeleccionado
+
             AgregarEditarProductoScreen(
                 productoExistente = productoEditar,
                 onGuardado = {
@@ -160,6 +195,30 @@ fun AlertaStockNavigation() {
                     navController.popBackStack()
                 },
                 viewModel = productoViewModel
+            )
+        }
+
+        composable(Rutas.ALERTAS) {
+            AlertasScreen(
+                onAtras = {
+                    navController.popBackStack()
+                },
+                onIrInicio = {
+                    navController.navigate(Rutas.DASHBOARD) {
+                        launchSingleTop = true
+                        popUpTo(Rutas.DASHBOARD) { inclusive = false }
+                    }
+                },
+                onIrProductos = {
+                    navController.navigate("${Rutas.PRODUCTOS}?filtro=TODOS") {
+                        launchSingleTop = true
+                    }
+                },
+                onIrAlertas = {
+                    navController.navigate(Rutas.ALERTAS) {
+                        launchSingleTop = true
+                    }
+                }
             )
         }
     }

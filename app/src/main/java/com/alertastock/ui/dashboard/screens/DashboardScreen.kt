@@ -70,7 +70,8 @@ fun DashboardScreen(
             AlertaStockBottomBar(
                 selected = BottomDestination.INICIO,
                 onInicioClick = onIrInicio,
-                onProductosClick = onProductos
+                onProductosClick = onProductos,
+                onAlertasClick = onAlertas
             )
         }
     ) { paddingValues ->
@@ -81,6 +82,8 @@ fun DashboardScreen(
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
+
+            // HEADER
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -147,6 +150,7 @@ fun DashboardScreen(
                 }
             }
 
+            // RESUMEN
             Text(
                 text = "RESUMEN GENERAL",
                 fontSize = 11.sp,
@@ -162,22 +166,8 @@ fun DashboardScreen(
                     .padding(horizontal = 14.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                TarjetaEstadistica(
-                    emoji = "📦",
-                    valor = totalProductos.toString(),
-                    etiqueta = "Productos totales",
-                    color = Blue,
-                    modifier = Modifier.weight(1f),
-                    onClick = onProductos
-                )
-                TarjetaEstadistica(
-                    emoji = "⚠️",
-                    valor = criticos.toString(),
-                    etiqueta = "Por agotarse",
-                    color = Red,
-                    modifier = Modifier.weight(1f),
-                    onClick = onProductosCriticos
-                )
+                TarjetaEstadistica("📦", totalProductos.toString(), "Productos totales", Blue, Modifier.weight(1f), onProductos)
+                TarjetaEstadistica("⚠️", criticos.toString(), "Por agotarse", Red, Modifier.weight(1f), onProductosCriticos)
             }
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -188,24 +178,11 @@ fun DashboardScreen(
                     .padding(horizontal = 14.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                TarjetaEstadistica(
-                    emoji = "📅",
-                    valor = porVencer.toString(),
-                    etiqueta = "Por vencer",
-                    color = Yellow,
-                    modifier = Modifier.weight(1f),
-                    onClick = onProductosBajos
-                )
-                TarjetaEstadistica(
-                    emoji = "✅",
-                    valor = enBuenEstado.toString(),
-                    etiqueta = "En buen estado",
-                    color = Green,
-                    modifier = Modifier.weight(1f),
-                    onClick = onProductos
-                )
+                TarjetaEstadistica("📅", porVencer.toString(), "Por vencer", Yellow, Modifier.weight(1f), onProductosBajos)
+                TarjetaEstadistica("✅", enBuenEstado.toString(), "En buen estado", Green, Modifier.weight(1f), onProductos)
             }
 
+            // ACCESO RÁPIDO
             Text(
                 text = "ACCESO RÁPIDO",
                 fontSize = 11.sp,
@@ -221,34 +198,10 @@ fun DashboardScreen(
                     .padding(horizontal = 14.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                AccesoRapido(
-                    emoji = "📦",
-                    label = "Productos",
-                    color = Blue,
-                    modifier = Modifier.weight(1f),
-                    onClick = onProductos
-                )
-                AccesoRapido(
-                    emoji = "📷",
-                    label = "Escanear",
-                    color = Green,
-                    modifier = Modifier.weight(1f),
-                    onClick = onEscanear
-                )
-                AccesoRapido(
-                    emoji = "🔔",
-                    label = "Alertas",
-                    color = Red,
-                    modifier = Modifier.weight(1f),
-                    onClick = onAlertas
-                )
-                AccesoRapido(
-                    emoji = "⚙️",
-                    label = "Configurar",
-                    color = Yellow,
-                    modifier = Modifier.weight(1f),
-                    onClick = onConfigurar
-                )
+                AccesoRapido("📦", "Productos", Blue, Modifier.weight(1f), onProductos)
+                AccesoRapido("📷", "Escanear", Green, Modifier.weight(1f), onEscanear)
+                AccesoRapido("🔔", "Alertas", Red, Modifier.weight(1f), onAlertas)
+                AccesoRapido("⚙️", "Configurar", Yellow, Modifier.weight(1f), onConfigurar)
             }
 
             Spacer(modifier = Modifier.height(40.dp))
