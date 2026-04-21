@@ -33,18 +33,26 @@ class SplashActivity : AppCompatActivity() {
         // Pasos de carga
         lifecycleScope.launch {
             delay(800)
-            binding.tvPaso1.animate().alpha(1f).duration = 400
+            if (!isFinishing) binding.tvPaso1.animate().alpha(1f).duration = 400
 
             delay(800)
-            binding.tvPaso2.animate().alpha(1f).duration = 400
+            if (!isFinishing) binding.tvPaso2.animate().alpha(1f).duration = 400
 
             delay(600)
-            binding.tvPaso3.animate().alpha(1f).duration = 400
+            if (!isFinishing) binding.tvPaso3.animate().alpha(1f).duration = 400
 
             delay(600)
-            // Ir a MainActivity con Compose
-            startActivity(Intent(this@SplashActivity, MainActivity::class.java))
-            finish()
+            if (!isFinishing) {
+                startActivity(Intent(this@SplashActivity, MainActivity::class.java))
+                // Evita la pantalla negra entre transiciones
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, android.R.anim.fade_in, android.R.anim.fade_out)
+                } else {
+                    @Suppress("DEPRECATION")
+                    overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+                }
+                finish()
+            }
         }
     }
 }

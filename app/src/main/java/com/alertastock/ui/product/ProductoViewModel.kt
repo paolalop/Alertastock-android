@@ -18,19 +18,15 @@ class ProductoViewModel(application: Application) : AndroidViewModel(application
 
     private val repository: ProductoRepository
 
-    // LiveData from repository — observed by UI
     val todosLosProductos by lazy { repository.todosLosProductos }
     val productosCriticos by lazy { repository.productosCriticos }
 
-    // Selected product for edit screen (null = adding new)
     var productoSeleccionado: Producto? by mutableStateOf(null)
         private set
 
-    // Loading state
     private val _cargando = MutableStateFlow(false)
     val cargando: StateFlow<Boolean> = _cargando.asStateFlow()
 
-    // Error state
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
@@ -66,6 +62,15 @@ class ProductoViewModel(application: Application) : AndroidViewModel(application
             repository.eliminar(producto)
         } catch (e: Exception) {
             _error.value = "Error al eliminar: ${e.message}"
+        }
+    }
+
+    // ✅ Descuenta stock por venta desde el escáner
+    fun descontarStock(id: Int, cantidad: Int) = viewModelScope.launch {
+        try {
+            repository.descontarStock(id, cantidad)
+        } catch (e: Exception) {
+            _error.value = "Error al descontar stock: ${e.message}"
         }
     }
 
