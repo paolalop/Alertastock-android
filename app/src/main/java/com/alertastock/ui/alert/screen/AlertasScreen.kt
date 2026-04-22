@@ -16,18 +16,24 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.alertastock.data.local.database.AlertaStockDatabase
 import com.alertastock.data.model.Alerta
 import com.alertastock.data.model.Producto
 import com.alertastock.data.model.TipoAlerta
+import com.alertastock.data.repository.AlertaRepository
+import com.alertastock.data.repository.ProductoRepository
 import com.alertastock.ui.alert.AlertaUiState
 import com.alertastock.ui.alert.AlertaViewModel
+import com.alertastock.ui.alert.AlertaViewModelFactory
 import com.alertastock.ui.product.screen.AlertaStockBottomBar
 import com.alertastock.ui.product.screen.BottomDestination
 import com.alertastock.ui.theme.*
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,9 +41,19 @@ fun AlertasScreen(
     onAtras: () -> Unit,
     onIrInicio: () -> Unit = {},
     onIrProductos: () -> Unit = {},
-    onIrAlertas: () -> Unit = {},
-    viewModel: AlertaViewModel = viewModel()
+    onIrAlertas: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val database = remember { AlertaStockDatabase.getDatabase(context) }
+    val productoDao = remember { database.productoDao() }
+
+    val viewModel: AlertaViewModel = viewModel(
+        factory = AlertaViewModelFactory(
+            alertaRepository = AlertaRepository(),
+            productoRepository = ProductoRepository(productoDao)
+        )
+    )
+
     val alertas by viewModel.alertas.collectAsState()
     val productos by viewModel.productos.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
@@ -83,10 +99,12 @@ fun AlertasScreen(
                 viewModel.limpiarAlertaSeleccionada()
                 viewModel.resetState()
             }
+
             is AlertaUiState.Error -> {
                 snackbarMessage = (uiState as AlertaUiState.Error).mensaje
                 viewModel.resetState()
             }
+
             else -> Unit
         }
     }
@@ -316,9 +334,7 @@ fun AlertasScreen(
                         .fillMaxWidth()
                         .height(52.dp),
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Green
-                    )
+                    colors = ButtonDefaults.buttonColors(containerColor = Green)
                 ) {
                     Text(
                         text = if (alertaEnEdicion == null) "Guardar alerta" else "Actualizar alerta",
@@ -436,7 +452,7 @@ fun AlertasScreen(
 
             snackbarMessage?.let { mensajeActual ->
                 LaunchedEffect(mensajeActual) {
-                    kotlinx.coroutines.delay(2200)
+                    delay(2200)
                     snackbarMessage = null
                 }
 
@@ -536,7 +552,11 @@ fun AlertaCard(
                     colors = ButtonDefaults.buttonColors(containerColor = Blue),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Editar", color = Color.White)
                 }
@@ -546,7 +566,11 @@ fun AlertaCard(
                     colors = ButtonDefaults.buttonColors(containerColor = Red),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Eliminar", color = Color.White)
                 }

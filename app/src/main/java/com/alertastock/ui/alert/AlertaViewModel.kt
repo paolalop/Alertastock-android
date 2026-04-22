@@ -1,6 +1,7 @@
 package com.alertastock.ui.alert
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.alertastock.data.model.Alerta
 import com.alertastock.data.model.Producto
@@ -184,8 +185,7 @@ class AlertaViewModel(
                 alertaRepository.cambiarEstadoAlerta(alertaId, activa)
                 cargarAlertas()
                 _uiState.value = AlertaUiState.Exitoso(
-                    if (activa) "Alerta activada"
-                    else "Alerta desactivada"
+                    if (activa) "Alerta activada" else "Alerta desactivada"
                 )
             } catch (e: Exception) {
                 _uiState.value = AlertaUiState.Error(
@@ -197,5 +197,18 @@ class AlertaViewModel(
 
     fun resetState() {
         _uiState.value = AlertaUiState.Inactivo
+    }
+}
+
+class AlertaViewModelFactory(
+    private val alertaRepository: AlertaRepository,
+    private val productoRepository: ProductoRepository
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(AlertaViewModel::class.java)) {
+            return AlertaViewModel(alertaRepository, productoRepository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

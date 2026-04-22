@@ -157,9 +157,7 @@ fun AlertaStockNavigation() {
             ProductosScreen(
                 viewModel = productoViewModel,
                 filtroInicial = filtroInicial,
-                onAtras = {
-                    navController.popBackStack()
-                },
+                onAtras = { navController.popBackStack() },
                 onAgregarProducto = {
                     navController.navigate(Rutas.AGREGAR_PRODUCTO)
                 },
@@ -175,6 +173,11 @@ fun AlertaStockNavigation() {
                 },
                 onIrProductos = {
                     navController.navigate("${Rutas.PRODUCTOS}?filtro=TODOS") {
+                        launchSingleTop = true
+                    }
+                },
+                onIrAlertas = {
+                    navController.navigate(Rutas.ALERTAS) {
                         launchSingleTop = true
                     }
                 }
