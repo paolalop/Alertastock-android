@@ -54,7 +54,6 @@ sealed class EstadoEscaner {
 @Composable
 fun ScannerScreen(
     onAtras: () -> Unit,
-    // ✅ Ahora recibe el código para pre-rellenar el formulario
     onAgregarProducto: (String) -> Unit = {},
     onVerDetalle: (Producto) -> Unit = {},
     onAgregarACanasta: (Producto) -> Unit = {},
@@ -64,10 +63,13 @@ fun ScannerScreen(
     val todosLosProductos by viewModel.todosLosProductos.observeAsState(emptyList())
 
     var estado by remember { mutableStateOf<EstadoEscaner>(EstadoEscaner.Escaneando) }
-    var escanerActivo by remember { mutableStateOf(true) }
     var linternaActiva by remember { mutableStateOf(false) }
     var camaraControl by remember { mutableStateOf<Camera?>(null) }
     var codigoManual by remember { mutableStateOf("") }
+
+    // ✅ Contador que sube cada vez que volvemos a escanear
+    // Esto fuerza a CamaraEscaner a reiniciarse completamente — incluyendo yaDetecto
+    var sesionEscaneo by remember { mutableIntStateOf(0) }
 
     var tienePermiso by remember {
         mutableStateOf(
@@ -92,17 +94,24 @@ fun ScannerScreen(
         } else {
             EstadoEscaner.ProductoNoEncontrado(codigo)
         }
-        escanerActivo = false
+    }
+
+    // ✅ Función para volver a escanear — sube el contador para reiniciar la cámara
+    fun volverAEscanear() {
+        sesionEscaneo++
+        estado = EstadoEscaner.Escaneando
     }
 
     Box(modifier = Modifier.fillMaxSize().background(BgScreen)) {
 
+        // ✅ La key hace que CamaraEscaner se destruya y recree cada vez que sesionEscaneo cambia
         if (tienePermiso && estado is EstadoEscaner.Escaneando) {
-            CamaraEscaner(
-                escanerActivo = escanerActivo,
-                onCodigoDetectado = { codigo -> buscarProducto(codigo) },
-                onCamaraLista = { camara -> camaraControl = camara }
-            )
+            key(sesionEscaneo) {
+                CamaraEscaner(
+                    onCodigoDetectado = { codigo -> buscarProducto(codigo) },
+                    onCamaraLista = { camara -> camaraControl = camara }
+                )
+            }
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
@@ -237,7 +246,7 @@ fun ScannerScreen(
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         OutlinedButton(
-                            onClick = { codigoManual = ""; estado = EstadoEscaner.Escaneando; escanerActivo = true },
+                            onClick = { codigoManual = ""; volverAEscanear() },
                             modifier = Modifier.fillMaxWidth().height(52.dp),
                             shape = RoundedCornerShape(14.dp)
                         ) {
@@ -249,7 +258,9 @@ fun ScannerScreen(
                 }
 
                 is EstadoEscaner.ProductoEncontrado -> {
-                    val producto = estadoActual.producto
+                    // ✅ Busca el producto actualizado desde Room en tiempo real
+                    val producto = todosLosProductos.find { it.id == estadoActual.producto.id }
+                        ?: estadoActual.producto
                     var mostrarDialogoStock by remember { mutableStateOf(false) }
 
                     if (mostrarDialogoStock) {
@@ -258,8 +269,7 @@ fun ScannerScreen(
                             onConfirmar = { cantidad ->
                                 viewModel.descontarStock(producto.id, cantidad)
                                 mostrarDialogoStock = false
-                                estado = EstadoEscaner.Escaneando
-                                escanerActivo = true
+                                // ✅ Se queda en la pantalla del producto — no vuelve a la cámara
                             },
                             onCancelar = { mostrarDialogoStock = false }
                         )
@@ -295,25 +305,43 @@ fun ScannerScreen(
                             }
                         }
                         Spacer(modifier = Modifier.height(20.dp))
-                        OutlinedButton(onClick = { onVerDetalle(producto) }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Blue)) {
+                        OutlinedButton(
+                            onClick = { onVerDetalle(producto) },
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Blue)
+                        ) {
                             Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Ver detalle", fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         }
                         Spacer(modifier = Modifier.height(10.dp))
-                        Button(onClick = { onAgregarACanasta(producto); estado = EstadoEscaner.Escaneando; escanerActivo = true }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = Blue)) {
+                        Button(
+                            onClick = { onAgregarACanasta(producto) }, // ✅ solo navega, NO vuelve a escanear
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Blue)
+                        ) {
                             Icon(Icons.Default.ShoppingCart, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Agregar a canasta", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
                         Spacer(modifier = Modifier.height(10.dp))
-                        Button(onClick = { mostrarDialogoStock = true }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = Green)) {
+                        Button(
+                            onClick = { mostrarDialogoStock = true },
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Green)
+                        ) {
                             Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Actualizar stock", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
                         Spacer(modifier = Modifier.height(10.dp))
-                        TextButton(onClick = { estado = EstadoEscaner.Escaneando; escanerActivo = true }, modifier = Modifier.fillMaxWidth()) {
+                        TextButton(
+                            onClick = { volverAEscanear() }, // ✅ reinicia la cámara
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
                             Text("Escanear otro", fontSize = 14.sp, color = TextSecondary)
                         }
                     }
@@ -338,7 +366,6 @@ fun ScannerScreen(
                             }
                         }
                         Spacer(modifier = Modifier.height(20.dp))
-                        // ✅ Pasa el código escaneado al formulario de agregar
                         Button(
                             onClick = { onAgregarProducto(codigo) },
                             modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -350,7 +377,11 @@ fun ScannerScreen(
                             Text("Agregar al inventario", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
                         Spacer(modifier = Modifier.height(10.dp))
-                        OutlinedButton(onClick = { estado = EstadoEscaner.Escaneando; escanerActivo = true }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp)) {
+                        OutlinedButton(
+                            onClick = { volverAEscanear() }, // ✅ reinicia la cámara
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
                             Text("Escanear otro", fontSize = 15.sp, color = TextSecondary)
                         }
                     }
@@ -360,10 +391,10 @@ fun ScannerScreen(
     }
 }
 
+// ✅ Ya no necesita escanerActivo — la key se encarga de reiniciar todo
 @androidx.annotation.OptIn(ExperimentalGetImage::class)
 @Composable
 fun CamaraEscaner(
-    escanerActivo: Boolean,
     onCodigoDetectado: (String) -> Unit,
     onCamaraLista: (Camera) -> Unit
 ) {
@@ -386,7 +417,7 @@ fun CamaraEscaner(
                     .build()
                     .also { analisis ->
                         analisis.setAnalyzer(executor) { imageProxy ->
-                            if (!escanerActivo || yaDetecto) { imageProxy.close(); return@setAnalyzer }
+                            if (yaDetecto) { imageProxy.close(); return@setAnalyzer }
                             val mediaImage = imageProxy.image
                             if (mediaImage != null) {
                                 val imagen = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
@@ -394,7 +425,10 @@ fun CamaraEscaner(
                                 escaner.process(imagen)
                                     .addOnSuccessListener { codigos ->
                                         val codigo = codigos.firstOrNull { it.rawValue != null }?.rawValue
-                                        if (codigo != null && !yaDetecto) { yaDetecto = true; onCodigoDetectado(codigo) }
+                                        if (codigo != null && !yaDetecto) {
+                                            yaDetecto = true
+                                            onCodigoDetectado(codigo)
+                                        }
                                     }
                                     .addOnCompleteListener { imageProxy.close() }
                             } else { imageProxy.close() }

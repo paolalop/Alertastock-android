@@ -6,6 +6,7 @@ import com.alertastock.data.model.Producto
 
 @Dao
 interface ProductoDao {
+
     @Query("SELECT * FROM productos ORDER BY nombre ASC")
     fun obtenerTodos(): LiveData<List<Producto>>
 
@@ -21,6 +22,10 @@ interface ProductoDao {
 
     @Query("SELECT * FROM productos WHERE codigoBarras = :codigo LIMIT 1")
     suspend fun buscarPorCodigo(codigo: String): Producto?
+
+    // ✅ NUEVO — busca un producto por su id
+    @Query("SELECT * FROM productos WHERE id = :id LIMIT 1")
+    suspend fun obtenerPorId(id: Int): Producto?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertar(producto: Producto)

@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.alertastock.ui.alert.screen.AlertasScreen
 import com.alertastock.ui.auth.screens.LoginScreen
 import com.alertastock.ui.auth.screens.RegistroScreen
 import com.alertastock.ui.auth.screens.OlvideContrasenaScreen
@@ -96,7 +97,10 @@ fun AlertaStockNavigation() {
                 onProductos = { navController.navigate("${Rutas.PRODUCTOS}?filtro=TODOS") },
                 onProductosCriticos = { navController.navigate("${Rutas.PRODUCTOS}?filtro=CRITICO") },
                 onProductosBajos = { navController.navigate("${Rutas.PRODUCTOS}?filtro=BAJO") },
+                onProductosPorVencer = { navController.navigate("${Rutas.PRODUCTOS}?filtro=POR_VENCER") },
+                onProductosBuenEstado = { navController.navigate("${Rutas.PRODUCTOS}?filtro=BUEN_ESTADO") },
                 onEscanear = { navController.navigate(Rutas.SCANNER) },
+                onAlertas = { navController.navigate(Rutas.ALERTAS) },
                 onCerrarSesion = {
                     navController.navigate(Rutas.LOGIN) {
                         popUpTo(Rutas.DASHBOARD) { inclusive = true }
@@ -122,7 +126,6 @@ fun AlertaStockNavigation() {
             )
         }
 
-        // ✅ La ruta ahora acepta un código opcional
         composable(
             route = "${Rutas.AGREGAR_PRODUCTO}?codigo={codigo}",
             arguments = listOf(navArgument("codigo") { type = NavType.StringType; defaultValue = "" })
@@ -144,12 +147,10 @@ fun AlertaStockNavigation() {
             )
         }
 
-        // Escáner — pasa el código al formulario si no se encuentra el producto
         composable(Rutas.SCANNER) {
             ScannerScreen(
                 viewModel = productoViewModel,
                 onAtras = { navController.popBackStack() },
-                // ✅ Navega a agregar producto con el código pre-relleno
                 onAgregarProducto = { codigo ->
                     productoViewModel.limpiarSeleccion()
                     navController.navigate("${Rutas.AGREGAR_PRODUCTO}?codigo=$codigo")
@@ -195,6 +196,12 @@ fun AlertaStockNavigation() {
                         popUpTo(Rutas.DASHBOARD) { inclusive = false }
                     }
                 }
+            )
+        }
+
+        composable(Rutas.ALERTAS) {
+            AlertasScreen(
+                onAtras = { navController.popBackStack() }
             )
         }
     }

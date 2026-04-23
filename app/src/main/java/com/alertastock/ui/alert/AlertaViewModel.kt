@@ -2,6 +2,7 @@ package com.alertastock.ui.alert
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import com.alertastock.data.model.Alerta
 import com.alertastock.data.model.Producto
@@ -57,13 +58,15 @@ class AlertaViewModel(
     }
 
     fun cargarProductos() {
+        // Sincronizar desde Firestore en background
         viewModelScope.launch {
             try {
                 productoRepository.sincronizarDesdeFirestore()
-            } catch (_: Exception) {
-            }
-
-            productoRepository.todosLosProductos.observeForever { lista ->
+            } catch (_: Exception) {}
+        }
+        // ✅ Convierte el LiveData a Flow para observarlo correctamente desde el ViewModel
+        viewModelScope.launch {
+            productoRepository.todosLosProductos.asFlow().collect { lista ->
                 _productos.value = lista ?: emptyList()
             }
         }

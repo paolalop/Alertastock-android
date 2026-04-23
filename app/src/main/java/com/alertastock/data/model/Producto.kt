@@ -28,7 +28,7 @@ data class Producto(
                 val formato = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                 val fecha = formato.parse(fechaVencimiento) ?: return false
                 val diferenciaDias = (fecha.time - Date().time) / (1000 * 60 * 60 * 24)
-                diferenciaDias in 0..30
+                diferenciaDias <= 30
             } catch (e: Exception) {
                 false
             }

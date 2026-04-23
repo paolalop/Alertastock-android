@@ -30,18 +30,13 @@ import com.alertastock.data.repository.ProductoRepository
 import com.alertastock.ui.alert.AlertaUiState
 import com.alertastock.ui.alert.AlertaViewModel
 import com.alertastock.ui.alert.AlertaViewModelFactory
-import com.alertastock.ui.product.screen.AlertaStockBottomBar
-import com.alertastock.ui.product.screen.BottomDestination
 import com.alertastock.ui.theme.*
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlertasScreen(
-    onAtras: () -> Unit,
-    onIrInicio: () -> Unit = {},
-    onIrProductos: () -> Unit = {},
-    onIrAlertas: () -> Unit = {}
+    onAtras: () -> Unit
 ) {
     val context = LocalContext.current
     val database = remember { AlertaStockDatabase.getDatabase(context) }
@@ -70,7 +65,6 @@ fun AlertasScreen(
     var diasPrevios by remember { mutableStateOf("") }
     var mensaje by remember { mutableStateOf("") }
     var activa by remember { mutableStateOf(true) }
-
     var snackbarMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(alertaEnEdicion, productos) {
@@ -99,43 +93,31 @@ fun AlertasScreen(
                 viewModel.limpiarAlertaSeleccionada()
                 viewModel.resetState()
             }
-
             is AlertaUiState.Error -> {
                 snackbarMessage = (uiState as AlertaUiState.Error).mensaje
                 viewModel.resetState()
             }
-
             else -> Unit
         }
     }
 
+    // Diálogo confirmar eliminar
     mostrarEliminar?.let { alerta ->
         AlertDialog(
             onDismissRequest = { mostrarEliminar = null },
             containerColor = BgCard,
-            title = {
-                Text(
-                    text = "Eliminar alerta",
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-            },
+            title = { Text("Eliminar alerta", color = TextPrimary, fontWeight = FontWeight.Bold) },
             text = {
                 Text(
-                    text = "¿Seguro que deseas eliminar la alerta de \"${alerta.productoNombre}\"?",
+                    "¿Seguro que deseas eliminar la alerta de \"${alerta.productoNombre}\"?",
                     color = TextSecondary
                 )
             },
             confirmButton = {
                 Button(
-                    onClick = {
-                        viewModel.eliminarAlerta(alerta.id)
-                        mostrarEliminar = null
-                    },
+                    onClick = { viewModel.eliminarAlerta(alerta.id); mostrarEliminar = null },
                     colors = ButtonDefaults.buttonColors(containerColor = Red)
-                ) {
-                    Text("Eliminar", color = Color.White)
-                }
+                ) { Text("Eliminar", color = Color.White) }
             },
             dismissButton = {
                 TextButton(onClick = { mostrarEliminar = null }) {
@@ -145,6 +127,7 @@ fun AlertasScreen(
         )
     }
 
+    // Bottom Sheet formulario
     if (mostrarFormulario) {
         ModalBottomSheet(
             onDismissRequest = {
@@ -165,9 +148,9 @@ fun AlertasScreen(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
-
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Selector producto
                 ExposedDropdownMenuBox(
                     expanded = expandedProducto,
                     onExpandedChange = { expandedProducto = !expandedProducto }
@@ -176,31 +159,19 @@ fun AlertasScreen(
                         value = productoSeleccionado?.nombre ?: "",
                         onValueChange = {},
                         readOnly = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
+                        modifier = Modifier.fillMaxWidth().menuAnchor(),
                         label = { Text("Producto") },
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = BgInput,
-                            unfocusedContainerColor = BgInput,
-                            focusedBorderColor = Blue,
-                            unfocusedBorderColor = BorderMedium,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary
+                            focusedContainerColor = BgInput, unfocusedContainerColor = BgInput,
+                            focusedBorderColor = Blue, unfocusedBorderColor = BorderMedium,
+                            focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary
                         )
                     )
-
-                    ExposedDropdownMenu(
-                        expanded = expandedProducto,
-                        onDismissRequest = { expandedProducto = false }
-                    ) {
+                    ExposedDropdownMenu(expanded = expandedProducto, onDismissRequest = { expandedProducto = false }) {
                         productos.forEach { producto ->
                             DropdownMenuItem(
                                 text = { Text(producto.nombre) },
-                                onClick = {
-                                    productoSeleccionado = producto
-                                    expandedProducto = false
-                                }
+                                onClick = { productoSeleccionado = producto; expandedProducto = false }
                             )
                         }
                     }
@@ -208,6 +179,7 @@ fun AlertasScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                // Selector tipo
                 ExposedDropdownMenuBox(
                     expanded = expandedTipo,
                     onExpandedChange = { expandedTipo = !expandedTipo }
@@ -216,31 +188,19 @@ fun AlertasScreen(
                         value = tipoSeleccionado.name.replace("_", " "),
                         onValueChange = {},
                         readOnly = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
+                        modifier = Modifier.fillMaxWidth().menuAnchor(),
                         label = { Text("Tipo de alerta") },
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = BgInput,
-                            unfocusedContainerColor = BgInput,
-                            focusedBorderColor = Blue,
-                            unfocusedBorderColor = BorderMedium,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary
+                            focusedContainerColor = BgInput, unfocusedContainerColor = BgInput,
+                            focusedBorderColor = Blue, unfocusedBorderColor = BorderMedium,
+                            focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary
                         )
                     )
-
-                    ExposedDropdownMenu(
-                        expanded = expandedTipo,
-                        onDismissRequest = { expandedTipo = false }
-                    ) {
+                    ExposedDropdownMenu(expanded = expandedTipo, onDismissRequest = { expandedTipo = false }) {
                         TipoAlerta.entries.forEach { tipo ->
                             DropdownMenuItem(
                                 text = { Text(tipo.name.replace("_", " ")) },
-                                onClick = {
-                                    tipoSeleccionado = tipo
-                                    expandedTipo = false
-                                }
+                                onClick = { tipoSeleccionado = tipo; expandedTipo = false }
                             )
                         }
                     }
@@ -250,70 +210,45 @@ fun AlertasScreen(
 
                 if (tipoSeleccionado == TipoAlerta.STOCK_BAJO) {
                     OutlinedTextField(
-                        value = stockMinimo,
-                        onValueChange = { stockMinimo = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Stock mínimo") },
+                        value = stockMinimo, onValueChange = { stockMinimo = it },
+                        modifier = Modifier.fillMaxWidth(), label = { Text("Stock mínimo") },
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = BgInput,
-                            unfocusedContainerColor = BgInput,
-                            focusedBorderColor = Blue,
-                            unfocusedBorderColor = BorderMedium,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary
+                            focusedContainerColor = BgInput, unfocusedContainerColor = BgInput,
+                            focusedBorderColor = Blue, unfocusedBorderColor = BorderMedium,
+                            focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary
                         )
                     )
                 }
 
                 if (tipoSeleccionado == TipoAlerta.POR_VENCER) {
                     OutlinedTextField(
-                        value = diasPrevios,
-                        onValueChange = { diasPrevios = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Días previos al vencimiento") },
+                        value = diasPrevios, onValueChange = { diasPrevios = it },
+                        modifier = Modifier.fillMaxWidth(), label = { Text("Días previos al vencimiento") },
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = BgInput,
-                            unfocusedContainerColor = BgInput,
-                            focusedBorderColor = Blue,
-                            unfocusedBorderColor = BorderMedium,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary
+                            focusedContainerColor = BgInput, unfocusedContainerColor = BgInput,
+                            focusedBorderColor = Blue, unfocusedBorderColor = BorderMedium,
+                            focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary
                         )
                     )
                 }
 
                 if (tipoSeleccionado == TipoAlerta.PERSONALIZADA) {
                     OutlinedTextField(
-                        value = mensaje,
-                        onValueChange = { mensaje = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Mensaje") },
+                        value = mensaje, onValueChange = { mensaje = it },
+                        modifier = Modifier.fillMaxWidth(), label = { Text("Mensaje") },
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = BgInput,
-                            unfocusedContainerColor = BgInput,
-                            focusedBorderColor = Blue,
-                            unfocusedBorderColor = BorderMedium,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary
+                            focusedContainerColor = BgInput, unfocusedContainerColor = BgInput,
+                            focusedBorderColor = Blue, unfocusedBorderColor = BorderMedium,
+                            focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary
                         )
                     )
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "Alerta activa",
-                        color = TextPrimary,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Switch(
-                        checked = activa,
-                        onCheckedChange = { activa = it }
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Text(text = "Alerta activa", color = TextPrimary, modifier = Modifier.weight(1f))
+                    Switch(checked = activa, onCheckedChange = { activa = it })
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -330,9 +265,7 @@ fun AlertasScreen(
                             activa = activa
                         )
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Green)
                 ) {
@@ -348,14 +281,6 @@ fun AlertasScreen(
 
     Scaffold(
         containerColor = BgScreen,
-        bottomBar = {
-            AlertaStockBottomBar(
-                selected = BottomDestination.ALERTAS,
-                onInicioClick = onIrInicio,
-                onProductosClick = onIrProductos,
-                onAlertasClick = onIrAlertas
-            )
-        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
@@ -383,49 +308,42 @@ fun AlertasScreen(
                 .padding(padding)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                Row(
+
+                // Header igual que el resto de pantallas
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(BgCard)
-                        .padding(start = 8.dp, end = 20.dp, top = 48.dp, bottom = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(start = 8.dp, end = 20.dp, top = 48.dp, bottom = 16.dp)
                 ) {
-                    IconButton(onClick = onAtras) {
-                        Icon(
-                            Icons.Default.ArrowBack,
-                            contentDescription = "Atrás",
-                            tint = TextPrimary
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onAtras) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Atrás", tint = TextPrimary)
+                        }
+                        Text(
+                            text = "Alertas",
+                            color = TextPrimary,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
-
-                    Text(
-                        text = "Alertas",
-                        color = TextPrimary,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold
-                    )
                 }
 
                 if (uiState is AlertaUiState.Cargando) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = Blue)
                     }
                 }
 
                 if (alertas.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "No hay alertas creadas",
-                            color = TextSecondary
-                        )
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("🔔", fontSize = 48.sp)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text("No hay alertas creadas", color = TextSecondary, fontSize = 15.sp)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Toca + para crear tu primera alerta", color = TextHint, fontSize = 13.sp)
+                        }
                     }
                 } else {
                     LazyColumn(
@@ -442,25 +360,18 @@ fun AlertasScreen(
                                 }
                             )
                         }
-
-                        item {
-                            Spacer(modifier = Modifier.height(90.dp))
-                        }
+                        item { Spacer(modifier = Modifier.height(90.dp)) }
                     }
                 }
             }
 
+            // Snackbar
             snackbarMessage?.let { mensajeActual ->
                 LaunchedEffect(mensajeActual) {
                     delay(2200)
                     snackbarMessage = null
                 }
-
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(16.dp)
-                ) {
+                Box(modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp)) {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = Blue),
                         shape = RoundedCornerShape(14.dp)
@@ -489,88 +400,41 @@ fun AlertaCard(
         colors = CardDefaults.cardColors(containerColor = BgCard),
         shape = RoundedCornerShape(16.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = alerta.productoNombre,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-
+                    Text(text = alerta.productoNombre, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = "Tipo: ${alerta.tipo.name.replace("_", " ")}",
-                        color = TextSecondary,
-                        fontSize = 13.sp
-                    )
-
+                    Text(text = "Tipo: ${alerta.tipo.name.replace("_", " ")}", color = TextSecondary, fontSize = 13.sp)
                     if (alerta.tipo == TipoAlerta.STOCK_BAJO) {
-                        Text(
-                            text = "Stock mínimo: ${alerta.stockMinimo}",
-                            color = TextSecondary,
-                            fontSize = 13.sp
-                        )
+                        Text(text = "Stock mínimo: ${alerta.stockMinimo}", color = TextSecondary, fontSize = 13.sp)
                     }
-
                     if (alerta.tipo == TipoAlerta.POR_VENCER) {
-                        Text(
-                            text = "Avisar ${alerta.diasPreviosVencimiento} días antes",
-                            color = TextSecondary,
-                            fontSize = 13.sp
-                        )
+                        Text(text = "Avisar ${alerta.diasPreviosVencimiento} días antes", color = TextSecondary, fontSize = 13.sp)
                     }
-
                     if (alerta.tipo == TipoAlerta.PERSONALIZADA && alerta.mensaje.isNotBlank()) {
-                        Text(
-                            text = alerta.mensaje,
-                            color = TextHint,
-                            fontSize = 12.sp
-                        )
+                        Text(text = alerta.mensaje, color = TextHint, fontSize = 12.sp)
                     }
                 }
-
-                Switch(
-                    checked = alerta.activa,
-                    onCheckedChange = onCambiarEstado
-                )
+                Switch(checked = alerta.activa, onCheckedChange = onCambiarEstado)
             }
-
             Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = onEditar,
                     colors = ButtonDefaults.buttonColors(containerColor = Blue),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Editar", color = Color.White)
                 }
-
                 Button(
                     onClick = onEliminar,
                     colors = ButtonDefaults.buttonColors(containerColor = Red),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
+                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Eliminar", color = Color.White)
                 }
