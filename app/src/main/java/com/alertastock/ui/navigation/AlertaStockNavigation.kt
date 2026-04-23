@@ -118,6 +118,13 @@ fun AlertaStockNavigation() {
                 viewModel = productoViewModel,
                 filtroInicial = filtroInicial,
                 onAtras = { navController.popBackStack() },
+                onInicioClick = {
+                    navController.navigate(Rutas.DASHBOARD) {
+                        popUpTo(Rutas.DASHBOARD) { inclusive = true }
+                    }
+                },
+                onEscanearClick = { navController.navigate(Rutas.SCANNER) },
+                onAlertasClick = { navController.navigate(Rutas.ALERTAS) },
                 onAgregarProducto = { navController.navigate("${Rutas.AGREGAR_PRODUCTO}?codigo=") },
                 onEditarProducto = { producto ->
                     productoViewModel.seleccionarProducto(producto)
@@ -151,6 +158,13 @@ fun AlertaStockNavigation() {
             ScannerScreen(
                 viewModel = productoViewModel,
                 onAtras = { navController.popBackStack() },
+                onInicioClick = {
+                    navController.navigate(Rutas.DASHBOARD) {
+                        popUpTo(Rutas.DASHBOARD) { inclusive = true }
+                    }
+                },
+                onProductosClick = { navController.navigate("${Rutas.PRODUCTOS}?filtro=TODOS") },
+                onAlertasClick = { navController.navigate(Rutas.ALERTAS) },
                 onAgregarProducto = { codigo ->
                     productoViewModel.limpiarSeleccion()
                     navController.navigate("${Rutas.AGREGAR_PRODUCTO}?codigo=$codigo")
@@ -201,7 +215,14 @@ fun AlertaStockNavigation() {
 
         composable(Rutas.ALERTAS) {
             AlertasScreen(
-                onAtras = { navController.popBackStack() }
+                onAtras = { navController.popBackStack() },
+                onInicioClick = {
+                    navController.navigate(Rutas.DASHBOARD) {
+                        popUpTo(Rutas.DASHBOARD) { inclusive = true }
+                    }
+                },
+                onProductosClick = { navController.navigate("${Rutas.PRODUCTOS}?filtro=TODOS") },
+                onEscanearClick = { navController.navigate(Rutas.SCANNER) }
             )
         }
     }

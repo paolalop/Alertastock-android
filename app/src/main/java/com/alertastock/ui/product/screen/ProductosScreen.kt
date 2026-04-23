@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.alertastock.data.model.Producto
+import com.alertastock.ui.components.AlertaStockBottomBar
+import com.alertastock.ui.components.BottomNavDestino
 import com.alertastock.ui.product.ProductoViewModel
 import com.alertastock.ui.theme.*
 
@@ -34,6 +36,9 @@ fun ProductosScreen(
     onAtras: () -> Unit,
     onAgregarProducto: () -> Unit = {},
     onEditarProducto: (Producto) -> Unit = {},
+    onInicioClick: () -> Unit = {},
+    onEscanearClick: () -> Unit = {},
+    onAlertasClick: () -> Unit = {},
     viewModel: ProductoViewModel = viewModel(),
     filtroInicial: String = "TODOS"
 ) {
@@ -43,7 +48,6 @@ fun ProductosScreen(
     var busqueda by remember { mutableStateOf("") }
     var mostrarFiltros by remember { mutableStateOf(false) }
 
-    // Filtros APLICADOS
     var filtroEstadoAplicado by remember {
         mutableStateOf(
             when (filtroInicial) {
@@ -58,37 +62,25 @@ fun ProductosScreen(
     var categoriaAplicada by remember { mutableStateOf("") }
     var ordenAplicado by remember { mutableStateOf(OrdenarPor.NOMBRE) }
 
-    // Filtros TEMPORALES
     var filtroEstadoTemp by remember { mutableStateOf(filtroEstadoAplicado) }
     var categoriaTemp by remember { mutableStateOf("") }
     var ordenTemp by remember { mutableStateOf(OrdenarPor.NOMBRE) }
 
-    // Listas derivadas
     val productosBajos = remember(todosLosProductos) {
         todosLosProductos.filter {
             it.stockActual > it.stockMinimo && it.stockActual <= it.stockMinimo * 2
         }
     }
-
     val productosPorVencer = remember(todosLosProductos) {
         todosLosProductos.filter { it.estaVenciendo }
     }
-
     val productosEnBuenEstado = remember(todosLosProductos) {
-        todosLosProductos.filter {
-            it.stockActual > it.stockMinimo * 2 && !it.estaVenciendo
-        }
+        todosLosProductos.filter { it.stockActual > it.stockMinimo * 2 && !it.estaVenciendo }
     }
-
     val categorias = remember(todosLosProductos) {
-        todosLosProductos
-            .map { it.categoria }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .sorted()
+        todosLosProductos.map { it.categoria }.filter { it.isNotBlank() }.distinct().sorted()
     }
 
-    // Lista final filtrada y ordenada
     val listaFiltrada = remember(
         busqueda, filtroEstadoAplicado, categoriaAplicada, ordenAplicado,
         todosLosProductos, productosCriticos, productosBajos, productosPorVencer, productosEnBuenEstado
@@ -102,7 +94,6 @@ fun ProductosScreen(
         }
         val porCategoria = if (categoriaAplicada.isBlank()) base
         else base.filter { it.categoria == categoriaAplicada }
-
         val porBusqueda = if (busqueda.isBlank()) porCategoria
         else porCategoria.filter {
             it.nombre.contains(busqueda, ignoreCase = true) ||
@@ -121,7 +112,6 @@ fun ProductosScreen(
 
     val hayFiltrosSheet = categoriaAplicada.isNotBlank() || ordenAplicado != OrdenarPor.NOMBRE
 
-    // Diálogo confirmar eliminar
     var productoAEliminar by remember { mutableStateOf<Producto?>(null) }
     productoAEliminar?.let { producto ->
         AlertDialog(
@@ -161,15 +151,8 @@ fun ProductosScreen(
                     .padding(horizontal = 20.dp)
                     .padding(bottom = 32.dp)
             ) {
-                Text(
-                    text = "Filtrar y ordenar",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
-                    modifier = Modifier.padding(bottom = 20.dp)
-                )
+                Text("Filtrar y ordenar", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary, modifier = Modifier.padding(bottom = 20.dp))
 
-                // Estado
                 Text("ESTADO", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextSecondary, letterSpacing = 0.8.sp)
                 Spacer(modifier = Modifier.height(8.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -181,8 +164,6 @@ fun ProductosScreen(
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
-
-                // Categoría
                 Text("CATEGORÍA", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextSecondary, letterSpacing = 0.8.sp)
                 Spacer(modifier = Modifier.height(8.dp))
                 if (categorias.isEmpty()) {
@@ -190,18 +171,14 @@ fun ProductosScreen(
                 } else {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(categorias) { categoria ->
-                            BottomSheetChip(
-                                texto = categoria,
-                                activo = categoriaTemp == categoria,
-                                onClick = { categoriaTemp = if (categoriaTemp == categoria) "" else categoria }
-                            )
+                            BottomSheetChip(texto = categoria, activo = categoriaTemp == categoria) {
+                                categoriaTemp = if (categoriaTemp == categoria) "" else categoria
+                            }
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
-
-                // Ordenar por
                 Text("ORDENAR POR", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextSecondary, letterSpacing = 0.8.sp)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -212,46 +189,39 @@ fun ProductosScreen(
                 }
 
                 Spacer(modifier = Modifier.height(28.dp))
-
                 Button(
-                    onClick = {
-                        filtroEstadoAplicado = filtroEstadoTemp
-                        categoriaAplicada = categoriaTemp
-                        ordenAplicado = ordenTemp
-                        mostrarFiltros = false
-                    },
+                    onClick = { filtroEstadoAplicado = filtroEstadoTemp; categoriaAplicada = categoriaTemp; ordenAplicado = ordenTemp; mostrarFiltros = false },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Blue)
-                ) {
-                    Text("Aplicar filtros", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                }
+                ) { Text("Aplicar filtros", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White) }
 
                 Spacer(modifier = Modifier.height(10.dp))
-
                 OutlinedButton(
                     onClick = {
-                        filtroEstadoTemp = FiltroEstado.TODOS
-                        categoriaTemp = ""
-                        ordenTemp = OrdenarPor.NOMBRE
-                        filtroEstadoAplicado = FiltroEstado.TODOS
-                        categoriaAplicada = ""
-                        ordenAplicado = OrdenarPor.NOMBRE
+                        filtroEstadoTemp = FiltroEstado.TODOS; categoriaTemp = ""; ordenTemp = OrdenarPor.NOMBRE
+                        filtroEstadoAplicado = FiltroEstado.TODOS; categoriaAplicada = ""; ordenAplicado = OrdenarPor.NOMBRE
                         mostrarFiltros = false
                     },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
-                ) {
-                    Text("Limpiar filtros", fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                }
+                ) { Text("Limpiar filtros", fontSize = 15.sp, fontWeight = FontWeight.Bold) }
             }
         }
     }
 
-    // Pantalla principal
     Scaffold(
         containerColor = BgScreen,
+        bottomBar = {
+            AlertaStockBottomBar(
+                destinoActual = BottomNavDestino.PRODUCTOS,
+                onInicioClick = onInicioClick,
+                onProductosClick = {},
+                onEscanearClick = onEscanearClick,
+                onAlertasClick = onAlertasClick
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onAgregarProducto,
@@ -289,41 +259,18 @@ fun ProductosScreen(
                         modifier = Modifier.weight(1f)
                     )
                     Box {
-                        IconButton(
-                            onClick = {
-                                filtroEstadoTemp = filtroEstadoAplicado
-                                categoriaTemp = categoriaAplicada
-                                ordenTemp = ordenAplicado
-                                mostrarFiltros = true
-                            }
-                        ) {
-                            Icon(
-                                Icons.Default.FilterList,
-                                contentDescription = "Filtrar",
-                                tint = if (hayFiltrosSheet) Blue else TextSecondary,
-                                modifier = Modifier.size(22.dp)
-                            )
+                        IconButton(onClick = { filtroEstadoTemp = filtroEstadoAplicado; categoriaTemp = categoriaAplicada; ordenTemp = ordenAplicado; mostrarFiltros = true }) {
+                            Icon(Icons.Default.FilterList, contentDescription = "Filtrar", tint = if (hayFiltrosSheet) Blue else TextSecondary, modifier = Modifier.size(22.dp))
                         }
                         if (hayFiltrosSheet) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(Blue)
-                                    .align(Alignment.TopEnd)
-                                    .offset(x = (-6).dp, y = 6.dp)
-                            )
+                            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Blue).align(Alignment.TopEnd).offset(x = (-6).dp, y = 6.dp))
                         }
                     }
                 }
             }
 
             // Barra de búsqueda
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-            ) {
+            Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
                 OutlinedTextField(
                     value = busqueda,
                     onValueChange = { busqueda = it },
@@ -340,76 +287,26 @@ fun ProductosScreen(
                     singleLine = true,
                     shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = BgInput,
-                        unfocusedContainerColor = BgInput,
-                        focusedBorderColor = Blue,
-                        unfocusedBorderColor = BorderMedium,
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                        cursorColor = Blue
+                        focusedContainerColor = BgInput, unfocusedContainerColor = BgInput,
+                        focusedBorderColor = Blue, unfocusedBorderColor = BorderMedium,
+                        focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, cursorColor = Blue
                     )
                 )
             }
 
             // Chips de acceso rápido
-            LazyRow(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item {
-                    FiltroChipRapido(
-                        texto = "Todos (${todosLosProductos.size})",
-                        activo = filtroEstadoAplicado == FiltroEstado.TODOS,
-                        color = Blue,
-                        onClick = { filtroEstadoAplicado = FiltroEstado.TODOS }
-                    )
-                }
-                item {
-                    FiltroChipRapido(
-                        texto = "Crítico (${productosCriticos.size})",
-                        activo = filtroEstadoAplicado == FiltroEstado.CRITICO,
-                        color = Red,
-                        onClick = { filtroEstadoAplicado = FiltroEstado.CRITICO }
-                    )
-                }
-                item {
-                    FiltroChipRapido(
-                        texto = "Bajo (${productosBajos.size})",
-                        activo = filtroEstadoAplicado == FiltroEstado.BAJO,
-                        color = Yellow,
-                        onClick = { filtroEstadoAplicado = FiltroEstado.BAJO }
-                    )
-                }
-                item {
-                    FiltroChipRapido(
-                        texto = "Por vencer (${productosPorVencer.size})",
-                        activo = filtroEstadoAplicado == FiltroEstado.POR_VENCER,
-                        color = Color(0xFFFB8C00),
-                        onClick = { filtroEstadoAplicado = FiltroEstado.POR_VENCER }
-                    )
-                }
-                item {
-                    FiltroChipRapido(
-                        texto = "Buen estado (${productosEnBuenEstado.size})",
-                        activo = filtroEstadoAplicado == FiltroEstado.BUEN_ESTADO,
-                        color = Green,
-                        onClick = { filtroEstadoAplicado = FiltroEstado.BUEN_ESTADO }
-                    )
-                }
+            LazyRow(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                item { FiltroChipRapido("Todos (${todosLosProductos.size})", filtroEstadoAplicado == FiltroEstado.TODOS, Blue) { filtroEstadoAplicado = FiltroEstado.TODOS } }
+                item { FiltroChipRapido("Crítico (${productosCriticos.size})", filtroEstadoAplicado == FiltroEstado.CRITICO, Red) { filtroEstadoAplicado = FiltroEstado.CRITICO } }
+                item { FiltroChipRapido("Bajo (${productosBajos.size})", filtroEstadoAplicado == FiltroEstado.BAJO, Yellow) { filtroEstadoAplicado = FiltroEstado.BAJO } }
+                item { FiltroChipRapido("Por vencer (${productosPorVencer.size})", filtroEstadoAplicado == FiltroEstado.POR_VENCER, Color(0xFFFB8C00)) { filtroEstadoAplicado = FiltroEstado.POR_VENCER } }
+                item { FiltroChipRapido("Buen estado (${productosEnBuenEstado.size})", filtroEstadoAplicado == FiltroEstado.BUEN_ESTADO, Green) { filtroEstadoAplicado = FiltroEstado.BUEN_ESTADO } }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
-
-            Text(
-                text = "${listaFiltrada.size} productos",
-                fontSize = 12.sp,
-                color = TextHint,
-                modifier = Modifier.padding(horizontal = 20.dp)
-            )
-
+            Text("${listaFiltrada.size} productos", fontSize = 12.sp, color = TextHint, modifier = Modifier.padding(horizontal = 20.dp))
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Lista de productos
             if (listaFiltrada.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -418,8 +315,7 @@ fun ProductosScreen(
                         Text(
                             text = if (busqueda.isNotEmpty()) "Sin resultados para \"$busqueda\""
                             else "No hay productos en este filtro",
-                            color = TextSecondary,
-                            fontSize = 15.sp
+                            color = TextSecondary, fontSize = 15.sp
                         )
                         if (busqueda.isEmpty() && filtroEstadoAplicado == FiltroEstado.TODOS && !hayFiltrosSheet) {
                             Spacer(modifier = Modifier.height(8.dp))
@@ -447,22 +343,13 @@ fun ProductosScreen(
     }
 }
 
-// Chip de acceso rápido
 @Composable
-fun FiltroChipRapido(
-    texto: String,
-    activo: Boolean,
-    color: Color,
-    onClick: () -> Unit
-) {
+fun FiltroChipRapido(texto: String, activo: Boolean, color: Color, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
         color = if (activo) color.copy(alpha = 0.2f) else BgCard,
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.5.dp,
-            color = if (activo) color else BorderMedium
-        )
+        border = androidx.compose.foundation.BorderStroke(width = 1.5.dp, color = if (activo) color else BorderMedium)
     ) {
         Text(
             text = texto,
@@ -474,21 +361,13 @@ fun FiltroChipRapido(
     }
 }
 
-// Chip del bottom sheet
 @Composable
-fun BottomSheetChip(
-    texto: String,
-    activo: Boolean,
-    onClick: () -> Unit
-) {
+fun BottomSheetChip(texto: String, activo: Boolean, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
         color = if (activo) Blue.copy(alpha = 0.15f) else Color.Transparent,
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.5.dp,
-            color = if (activo) Blue else BorderMedium
-        )
+        border = androidx.compose.foundation.BorderStroke(width = 1.5.dp, color = if (activo) Blue else BorderMedium)
     ) {
         Text(
             text = texto,
@@ -500,116 +379,48 @@ fun BottomSheetChip(
     }
 }
 
-// Tarjeta de producto
 @Composable
-fun ProductoCard(
-    producto: Producto,
-    onEditar: () -> Unit,
-    onEliminar: () -> Unit
-) {
+fun ProductoCard(producto: Producto, onEditar: () -> Unit, onEliminar: () -> Unit) {
     val stockColor = when {
         producto.stockActual <= producto.stockMinimo -> Red
         producto.stockActual <= producto.stockMinimo * 2 -> Yellow
         else -> Green
     }
-
     val stockProgress = if (producto.stockMinimo > 0) {
         (producto.stockActual.toFloat() / (producto.stockMinimo * 3).toFloat()).coerceIn(0f, 1f)
     } else 1f
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = BgCard),
-        shape = RoundedCornerShape(16.dp)
-    ) {
+    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = BgCard), shape = RoundedCornerShape(16.dp)) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 14.dp, top = 14.dp, bottom = 14.dp, end = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 14.dp, top = 14.dp, bottom = 14.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(stockColor.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
-            ) {
+            Box(modifier = Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)).background(stockColor.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
                 Text(text = producto.emoji, fontSize = 24.sp)
             }
-
             Spacer(modifier = Modifier.width(12.dp))
-
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = producto.nombre,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Text(text = producto.nombre, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "Stock: ${producto.stockActual} unid.  ·  Mín: ${producto.stockMinimo}",
-                    fontSize = 12.sp,
-                    color = TextSecondary
-                )
+                Text(text = "Stock: ${producto.stockActual} unid.  ·  Mín: ${producto.stockMinimo}", fontSize = 12.sp, color = TextSecondary)
                 if (producto.fechaVencimiento.isNotBlank()) {
-                    Text(
-                        text = "Vence: ${producto.fechaVencimiento}",
-                        fontSize = 11.sp,
-                        color = if (producto.estaVenciendo) Color(0xFFFB8C00) else TextSecondary
-                    )
+                    Text(text = "Vence: ${producto.fechaVencimiento}", fontSize = 11.sp, color = if (producto.estaVenciendo) Color(0xFFFB8C00) else TextSecondary)
                 }
                 Spacer(modifier = Modifier.height(6.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(4.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(BorderMedium)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(stockProgress)
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(stockColor)
-                    )
+                Box(modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)).background(BorderMedium)) {
+                    Box(modifier = Modifier.fillMaxWidth(stockProgress).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(stockColor))
                 }
             }
-
             Spacer(modifier = Modifier.width(8.dp))
-
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(stockColor)
-            )
-
+            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(stockColor))
             Spacer(modifier = Modifier.width(8.dp))
-
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Button(
-                    onClick = onEditar,
-                    modifier = Modifier.width(72.dp).height(34.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Blue),
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(0.dp)
-                ) {
+                Button(onClick = onEditar, modifier = Modifier.width(72.dp).height(34.dp), colors = ButtonDefaults.buttonColors(containerColor = Blue), shape = RoundedCornerShape(10.dp), contentPadding = PaddingValues(0.dp)) {
                     Icon(Icons.Default.Edit, contentDescription = "Editar", modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Editar", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
-                Button(
-                    onClick = onEliminar,
-                    modifier = Modifier.width(72.dp).height(34.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Red),
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(0.dp)
-                ) {
+                Button(onClick = onEliminar, modifier = Modifier.width(72.dp).height(34.dp), colors = ButtonDefaults.buttonColors(containerColor = Red), shape = RoundedCornerShape(10.dp), contentPadding = PaddingValues(0.dp)) {
                     Icon(Icons.Default.Delete, contentDescription = "Borrar", modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Borrar", fontSize = 11.sp, fontWeight = FontWeight.Bold)

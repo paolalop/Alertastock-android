@@ -83,4 +83,7 @@
     <string name="acceso_configurar">Configurar</string>
     <string name="cerrar_sesion">Cerrar sesión</string>
     <string name="error_generico">Ocurrió un error. Intenta de nuevo</string>
+    <string name="saludo_manana">Buenos días,</string>
+    <string name="saludo_tarde">Buenas tardes,</string>
+    <string name="saludo_noche">Buenas noches,</string>
 </resources>
