@@ -23,7 +23,6 @@ interface ProductoDao {
     @Query("SELECT * FROM productos WHERE codigoBarras = :codigo LIMIT 1")
     suspend fun buscarPorCodigo(codigo: String): Producto?
 
-    // ✅ NUEVO — busca un producto por su id
     @Query("SELECT * FROM productos WHERE id = :id LIMIT 1")
     suspend fun obtenerPorId(id: Int): Producto?
 
@@ -38,4 +37,8 @@ interface ProductoDao {
 
     @Query("UPDATE productos SET stockActual = stockActual - :cantidad WHERE id = :id")
     suspend fun descontarStock(id: Int, cantidad: Int)
+
+    // ✅ Borra todos los productos locales para limpiar al cambiar de sesión
+    @Query("DELETE FROM productos")
+    suspend fun limpiarTodos()
 }

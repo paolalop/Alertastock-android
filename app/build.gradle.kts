@@ -84,4 +84,6 @@ dependencies {
 // ML Kit — escaneo de códigos de barras
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
     implementation("com.google.guava:guava:31.1-android")
+
+    implementation("com.google.firebase:firebase-messaging-ktx")
 }

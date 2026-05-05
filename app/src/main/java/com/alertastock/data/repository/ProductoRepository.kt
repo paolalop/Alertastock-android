@@ -11,6 +11,7 @@ class ProductoRepository(private val productoDao: ProductoDao) {
     private val firestore = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
+    // ✅ Ruta por usuario — cada usuario lee y escribe en su propia colección
     private val coleccionProductos
         get() = firestore
             .collection("usuarios")
@@ -56,12 +57,10 @@ class ProductoRepository(private val productoDao: ProductoDao) {
         return productoDao.buscarPorCodigo(codigo)
     }
 
-    // ✅ Descuenta stock en Room y luego actualiza Firestore
     suspend fun descontarStock(id: Int, cantidad: Int) {
         // Paso 1: descontar en Room
         productoDao.descontarStock(id, cantidad)
-
-        // Paso 2: obtener el producto actualizado y sincronizar con Firestore
+        // Paso 2: obtener producto actualizado y sincronizar con Firestore
         try {
             val productoActualizado = productoDao.obtenerPorId(id) ?: return
             coleccionProductos
@@ -80,6 +79,11 @@ class ProductoRepository(private val productoDao: ProductoDao) {
                 .set(actualizado.toMap())
                 .await()
         } catch (e: Exception) {}
+    }
+
+    // Limpia Room para evitar datos de sesión anterior
+    suspend fun limpiarProductosLocales() {
+        productoDao.limpiarTodos()
     }
 
     suspend fun sincronizarDesdeFirestore() {

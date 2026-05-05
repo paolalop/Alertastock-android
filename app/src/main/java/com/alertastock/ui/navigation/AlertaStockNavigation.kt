@@ -13,6 +13,11 @@ import com.alertastock.ui.auth.screens.RegistroScreen
 import com.alertastock.ui.auth.screens.OlvideContrasenaScreen
 import com.alertastock.ui.auth.screens.VerificarCorreoScreen
 import com.alertastock.ui.auth.screens.CuentaCreadaScreen
+import com.alertastock.ui.configuracion.CambiarContrasenaScreen
+import com.alertastock.ui.configuracion.CategoriasScreen
+import com.alertastock.ui.configuracion.ConfiguracionScreen
+import com.alertastock.ui.configuracion.EditarPerfilScreen
+import com.alertastock.ui.configuracion.NotificacionesScreen
 import com.alertastock.ui.dashboard.screens.DashboardScreen
 import com.alertastock.ui.product.ProductoViewModel
 import com.alertastock.ui.product.screen.AgregarEditarProductoScreen
@@ -36,6 +41,11 @@ object Rutas {
     const val ALERTAS = "alertas"
     const val CAJA = "caja"
     const val RESUMEN_COMPRA = "resumen_compra"
+    const val CONFIGURACION = "configuracion"
+    const val EDITAR_PERFIL = "editar_perfil"
+    const val CAMBIAR_CONTRASENA = "cambiar_contrasena"
+    const val NOTIFICACIONES = "notificaciones"
+    const val CATEGORIAS = "categorias"
 }
 
 @Composable
@@ -101,6 +111,7 @@ fun AlertaStockNavigation() {
                 onProductosBuenEstado = { navController.navigate("${Rutas.PRODUCTOS}?filtro=BUEN_ESTADO") },
                 onEscanear = { navController.navigate(Rutas.SCANNER) },
                 onAlertas = { navController.navigate(Rutas.ALERTAS) },
+                onConfigurar = { navController.navigate(Rutas.CONFIGURACION) },
                 onCerrarSesion = {
                     navController.navigate(Rutas.LOGIN) {
                         popUpTo(Rutas.DASHBOARD) { inclusive = true }
@@ -223,6 +234,63 @@ fun AlertaStockNavigation() {
                 },
                 onProductosClick = { navController.navigate("${Rutas.PRODUCTOS}?filtro=TODOS") },
                 onEscanearClick = { navController.navigate(Rutas.SCANNER) }
+            )
+        }
+
+        // ── Módulo Configuración ──────────────────────────────────────────────
+        composable(Rutas.CONFIGURACION) {
+            ConfiguracionScreen(
+                onAtras = { navController.popBackStack() },
+                onEditarPerfil = { navController.navigate(Rutas.EDITAR_PERFIL) },
+                onCambiarContrasena = { navController.navigate(Rutas.CAMBIAR_CONTRASENA) },
+                onNotificaciones = { navController.navigate(Rutas.NOTIFICACIONES) },
+                onCategorias = { navController.navigate(Rutas.CATEGORIAS) },
+                onCerrarSesion = {
+                    navController.navigate(Rutas.LOGIN) {
+                        popUpTo(Rutas.DASHBOARD) { inclusive = true }
+                    }
+                },
+                onInicioClick = {
+                    navController.navigate(Rutas.DASHBOARD) {
+                        popUpTo(Rutas.DASHBOARD) { inclusive = true }
+                    }
+                },
+                onProductosClick = { navController.navigate("${Rutas.PRODUCTOS}?filtro=TODOS") },
+                onEscanearClick = { navController.navigate(Rutas.SCANNER) },
+                onAlertasClick = { navController.navigate(Rutas.ALERTAS) }
+            )
+        }
+
+        composable(Rutas.EDITAR_PERFIL) {
+            EditarPerfilScreen(
+                onAtras = { navController.popBackStack() }
+            )
+        }
+
+        composable(Rutas.CAMBIAR_CONTRASENA) {
+            CambiarContrasenaScreen(
+                onAtras = { navController.popBackStack() }
+            )
+        }
+
+        composable(Rutas.NOTIFICACIONES) {
+            NotificacionesScreen(
+                onAtras = { navController.popBackStack() },
+                onInicioClick = {
+                    navController.navigate(Rutas.DASHBOARD) {
+                        popUpTo(Rutas.DASHBOARD) { inclusive = true }
+                    }
+                },
+                onProductosClick = { navController.navigate("${Rutas.PRODUCTOS}?filtro=TODOS") },
+                onEscanearClick = { navController.navigate(Rutas.SCANNER) },
+                onAlertasClick = { navController.navigate(Rutas.ALERTAS) }
+            )
+        }
+
+        composable(Rutas.CATEGORIAS) {
+            CategoriasScreen(
+                onAtras = { navController.popBackStack() },
+                viewModel = productoViewModel
             )
         }
     }

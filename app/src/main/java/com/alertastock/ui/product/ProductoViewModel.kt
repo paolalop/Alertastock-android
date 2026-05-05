@@ -65,7 +65,6 @@ class ProductoViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    // ✅ Descuenta stock por venta desde el escáner
     fun descontarStock(id: Int, cantidad: Int) = viewModelScope.launch {
         try {
             repository.descontarStock(id, cantidad)
@@ -87,6 +86,8 @@ class ProductoViewModel(application: Application) : AndroidViewModel(application
     fun sincronizar() = viewModelScope.launch {
         try {
             _cargando.value = true
+            // ✅ Limpia Room primero para evitar datos de sesión anterior
+            repository.limpiarProductosLocales()
             repository.sincronizarDesdeFirestore()
         } catch (e: Exception) {
             _error.value = "Error al sincronizar: ${e.message}"
