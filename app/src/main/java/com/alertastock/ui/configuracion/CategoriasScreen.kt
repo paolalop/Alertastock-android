@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,18 +23,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.alertastock.data.local.database.AlertaStockDatabase
-import com.alertastock.data.repository.ProductoRepository
+import com.alertastock.data.model.Categoria
 import com.alertastock.ui.product.ProductoViewModel
 import com.alertastock.ui.theme.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-// Colores disponibles para categorías
+// Emojis disponibles para categorías
+val EMOJIS_CATEGORIA = listOf(
+    "🥛", "🥤", "🌾", "🧼", "🍿", "🍞",
+    "🥩", "🐟", "🥦", "🍎", "🧃", "🏪",
+    "💊", "🧴", "📦", "🛒", "🍫", "🥚"
+)
+
 val COLORES_CATEGORIA = listOf(
-    Color(0xFF2E67F8), // Azul
-    Color(0xFF43A047), // Verde
-    Color(0xFFFB8C00), // Naranja
-    Color(0xFFE53935), // Rojo
-    Color(0xFF9C27B0), // Morado
-    Color(0xFFFFB300)  // Amarillo
+    Color(0xFF2E67F8),
+    Color(0xFF43A047),
+    Color(0xFFFB8C00),
+    Color(0xFFE53935),
+    Color(0xFF9C27B0),
+    Color(0xFFFFB300)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,35 +51,30 @@ fun CategoriasScreen(
     onAtras: () -> Unit,
     viewModel: ProductoViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val database = remember { AlertaStockDatabase.getDatabase(context) }
+    val categoriaDao = remember { database.categoriaDao() }
+
+    val categorias by categoriaDao.obtenerTodas().observeAsState(emptyList())
     val todosLosProductos by viewModel.todosLosProductos.observeAsState(emptyList())
 
-    // Categorías únicas con conteo de productos
-    val categorias = remember(todosLosProductos) {
-        todosLosProductos
-            .groupBy { it.categoria }
-            .filter { it.key.isNotBlank() }
-            .map { (nombre, productos) -> Pair(nombre, productos.size) }
-            .sortedBy { it.first }
-    }
-
     var mostrarFormulario by remember { mutableStateOf(false) }
-    var categoriaEnEdicion by remember { mutableStateOf<String?>(null) }
-    var nombreNuevaCategoria by remember { mutableStateOf("") }
-    var colorSeleccionado by remember { mutableStateOf(COLORES_CATEGORIA[0]) }
+    var categoriaEnEdicion by remember { mutableStateOf<Categoria?>(null) }
+    var nombreCategoria by remember { mutableStateOf("") }
+    var emojiSeleccionado by remember { mutableStateOf(EMOJIS_CATEGORIA[0]) }
     var mensajeExito by remember { mutableStateOf<String?>(null) }
-    var mostrarEliminar by remember { mutableStateOf<String?>(null) }
+    var mostrarEliminar by remember { mutableStateOf<Categoria?>(null) }
 
     // Diálogo confirmar eliminar
     mostrarEliminar?.let { categoria ->
+        val conteo = todosLosProductos.count { it.categoria == categoria.nombre }
         AlertDialog(
             onDismissRequest = { mostrarEliminar = null },
             containerColor = BgCard,
             icon = {
                 Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(Red.copy(alpha = 0.12f)),
+                    modifier = Modifier.size(56.dp).clip(CircleShape).background(Red.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.Delete, contentDescription = null, tint = Red, modifier = Modifier.size(28.dp))
@@ -79,13 +83,22 @@ fun CategoriasScreen(
             title = { Text("¿Eliminar Categoría?", color = TextPrimary, fontWeight = FontWeight.Bold) },
             text = {
                 Text(
-                    "¿Estás seguro que deseas eliminar esta categoría? Si la eliminas, ya no aparecerá en el listado de categorías.",
+                    "¿Estás seguro que deseas eliminar \"${categoria.nombre}\"? Si la eliminas, ya no aparecerá en el listado de categorías.",
                     color = TextSecondary
                 )
             },
             confirmButton = {
                 Button(
-                    onClick = { mostrarEliminar = null },
+                    onClick = {
+                        scope.launch {
+                            // ✅ Elimina de la tabla de categorías
+                            categoriaDao.eliminar(categoria)
+                            // ✅ Limpia la categoría de los productos que la tengan
+                            viewModel.eliminarCategoria(categoria.nombre)
+                            mensajeExito = "Categoría eliminada"
+                            mostrarEliminar = null
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Red),
                     shape = RoundedCornerShape(12.dp)
@@ -105,8 +118,8 @@ fun CategoriasScreen(
             onDismissRequest = {
                 mostrarFormulario = false
                 categoriaEnEdicion = null
-                nombreNuevaCategoria = ""
-                colorSeleccionado = COLORES_CATEGORIA[0]
+                nombreCategoria = ""
+                emojiSeleccionado = EMOJIS_CATEGORIA[0]
             },
             containerColor = BgCard,
             shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
@@ -123,62 +136,62 @@ fun CategoriasScreen(
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
                 )
-                Text(
-                    text = if (categoriaEnEdicion == null)
-                        "Crea una categoría para organizar tus productos"
-                    else "Los cambios afectarán los productos de esta categoría",
-                    fontSize = 13.sp,
-                    color = if (categoriaEnEdicion == null) TextSecondary else Color(0xFFFB8C00),
-                    modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
-                )
+                if (categoriaEnEdicion != null) {
+                    val conteo = todosLosProductos.count { it.categoria == categoriaEnEdicion?.nombre }
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Yellow.copy(alpha = 0.10f)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Info, contentDescription = null, tint = Yellow, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Los cambios afectarán los $conteo productos de esta categoría", color = Yellow, fontSize = 12.sp)
+                        }
+                    }
+                } else {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
 
                 // Nombre
                 Text("NOMBRE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextSecondary, letterSpacing = 0.8.sp)
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
-                    value = nombreNuevaCategoria,
-                    onValueChange = { nombreNuevaCategoria = it },
+                    value = nombreCategoria,
+                    onValueChange = { nombreCategoria = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Ej: Carnes y embutidos", color = TextHint) },
+                    placeholder = { Text("Ej: Lácteos", color = TextHint) },
                     leadingIcon = {
-                        Icon(Icons.Default.Category, contentDescription = null, tint = TextHint, modifier = Modifier.size(18.dp))
+                        Text(emojiSeleccionado, fontSize = 18.sp, modifier = Modifier.padding(start = 4.dp))
                     },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = BgInput,
-                        unfocusedContainerColor = BgInput,
-                        focusedBorderColor = Blue,
-                        unfocusedBorderColor = BorderMedium,
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                        cursorColor = Blue
+                        focusedContainerColor = BgInput, unfocusedContainerColor = BgInput,
+                        focusedBorderColor = Blue, unfocusedBorderColor = BorderMedium,
+                        focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, cursorColor = Blue
                     )
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Selector de color
-                Text("COLOR", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextSecondary, letterSpacing = 0.8.sp)
+                // Selector de ícono (emoji)
+                Text("ÍCONO", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextSecondary, letterSpacing = 0.8.sp)
                 Spacer(modifier = Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    COLORES_CATEGORIA.forEach { color ->
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(EMOJIS_CATEGORIA) { emoji ->
                         Box(
                             modifier = Modifier
-                                .size(if (colorSeleccionado == color) 36.dp else 30.dp)
-                                .clip(CircleShape)
-                                .background(color)
-                                .clickable { colorSeleccionado = color },
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    if (emojiSeleccionado == emoji) Blue.copy(alpha = 0.15f)
+                                    else BgInput
+                                )
+                                .clickable { emojiSeleccionado = emoji },
                             contentAlignment = Alignment.Center
                         ) {
-                            if (colorSeleccionado == color) {
-                                Icon(
-                                    Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
+                            Text(emoji, fontSize = 22.sp)
                         }
                     }
                 }
@@ -186,20 +199,34 @@ fun CategoriasScreen(
                 Spacer(modifier = Modifier.height(28.dp))
 
                 if (categoriaEnEdicion != null) {
-                    // Edición — botones Guardar y Eliminar
+                    // Edición
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Button(
                             onClick = {
-                                if (nombreNuevaCategoria.isNotBlank()) {
-                                    mensajeExito = "Guardado correctamente"
-                                    mostrarFormulario = false
-                                    categoriaEnEdicion = null
-                                    nombreNuevaCategoria = ""
+                                if (nombreCategoria.isNotBlank()) {
+                                    scope.launch {
+                                        val nombreAnterior = categoriaEnEdicion!!.nombre
+                                        val categoriaActualizada = categoriaEnEdicion!!.copy(
+                                            nombre = nombreCategoria.trim(),
+                                            emoji = emojiSeleccionado
+                                        )
+                                        // ✅ Actualiza en la tabla de categorías
+                                        categoriaDao.actualizar(categoriaActualizada)
+                                        // ✅ Renombra en todos los productos si cambió el nombre
+                                        if (nombreAnterior != nombreCategoria.trim()) {
+                                            viewModel.renombrarCategoria(nombreAnterior, nombreCategoria.trim())
+                                        }
+                                        mensajeExito = "Guardado correctamente"
+                                        mostrarFormulario = false
+                                        categoriaEnEdicion = null
+                                        nombreCategoria = ""
+                                    }
                                 }
                             },
                             modifier = Modifier.weight(1f).height(52.dp),
                             shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Blue)
+                            colors = ButtonDefaults.buttonColors(containerColor = Blue),
+                            enabled = nombreCategoria.isNotBlank()
                         ) {
                             Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
@@ -221,27 +248,35 @@ fun CategoriasScreen(
                     }
                     Spacer(modifier = Modifier.height(10.dp))
                     TextButton(
-                        onClick = {
-                            mostrarFormulario = false
-                            categoriaEnEdicion = null
-                            nombreNuevaCategoria = ""
-                        },
+                        onClick = { mostrarFormulario = false; categoriaEnEdicion = null; nombreCategoria = "" },
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("Cancelar", color = TextSecondary) }
                 } else {
-                    // Nueva — botón Crear
+                    // Nueva categoría
                     Button(
                         onClick = {
-                            if (nombreNuevaCategoria.isNotBlank()) {
-                                mensajeExito = "Categoría agregada correctamente"
-                                mostrarFormulario = false
-                                nombreNuevaCategoria = ""
+                            if (nombreCategoria.isNotBlank()) {
+                                scope.launch {
+                                    // ✅ Verifica que no exista ya
+                                    val existente = categoriaDao.buscarPorNombre(nombreCategoria.trim())
+                                    if (existente == null) {
+                                        categoriaDao.insertar(
+                                            Categoria(nombre = nombreCategoria.trim(), emoji = emojiSeleccionado)
+                                        )
+                                        mensajeExito = "Categoría agregada correctamente"
+                                        mostrarFormulario = false
+                                        nombreCategoria = ""
+                                        emojiSeleccionado = EMOJIS_CATEGORIA[0]
+                                    } else {
+                                        mensajeExito = "Ya existe una categoría con ese nombre"
+                                    }
+                                }
                             }
                         },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Green),
-                        enabled = nombreNuevaCategoria.isNotBlank()
+                        enabled = nombreCategoria.isNotBlank()
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -249,7 +284,7 @@ fun CategoriasScreen(
                     }
                     Spacer(modifier = Modifier.height(10.dp))
                     TextButton(
-                        onClick = { mostrarFormulario = false; nombreNuevaCategoria = "" },
+                        onClick = { mostrarFormulario = false; nombreCategoria = "" },
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("Cancelar", color = TextSecondary) }
                 }
@@ -263,8 +298,8 @@ fun CategoriasScreen(
             FloatingActionButton(
                 onClick = {
                     categoriaEnEdicion = null
-                    nombreNuevaCategoria = ""
-                    colorSeleccionado = COLORES_CATEGORIA[0]
+                    nombreCategoria = ""
+                    emojiSeleccionado = EMOJIS_CATEGORIA[0]
                     mostrarFormulario = true
                 },
                 containerColor = Blue,
@@ -292,36 +327,32 @@ fun CategoriasScreen(
                     IconButton(onClick = onAtras) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Atrás", tint = TextPrimary)
                     }
-                    Text(
-                        "Categorías",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Text("Categorías", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary, modifier = Modifier.weight(1f))
                 }
             }
 
             // Banner éxito
             mensajeExito?.let { msg ->
                 LaunchedEffect(msg) {
-                    kotlinx.coroutines.delay(2500)
+                    delay(2500)
                     mensajeExito = null
                 }
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    colors = CardDefaults.cardColors(containerColor = Green.copy(alpha = 0.12f)),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (msg.contains("existe")) Yellow.copy(alpha = 0.12f) else Green.copy(alpha = 0.12f)
+                    ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Green, modifier = Modifier.size(18.dp))
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            if (msg.contains("existe")) Icons.Default.Warning else Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = if (msg.contains("existe")) Yellow else Green,
+                            modifier = Modifier.size(18.dp)
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(msg, color = Green, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text(msg, color = if (msg.contains("existe")) Yellow else Green, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -341,17 +372,18 @@ fun CategoriasScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(categorias) { (nombre, conteo) ->
-                        val colorIndex = categorias.indexOf(Pair(nombre, conteo)) % COLORES_CATEGORIA.size
+                    items(categorias, key = { it.id }) { categoria ->
+                        val colorIndex = (categoria.nombre.hashCode() and 0x7FFFFFFF) % COLORES_CATEGORIA.size
                         val color = COLORES_CATEGORIA[colorIndex]
+                        val conteo = todosLosProductos.count { it.categoria == categoria.nombre }
 
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    categoriaEnEdicion = nombre
-                                    nombreNuevaCategoria = nombre
-                                    colorSeleccionado = color
+                                    categoriaEnEdicion = categoria
+                                    nombreCategoria = categoria.nombre
+                                    emojiSeleccionado = categoria.emoji
                                     mostrarFormulario = true
                                 },
                             colors = CardDefaults.cardColors(containerColor = BgCard),
@@ -363,29 +395,19 @@ fun CategoriasScreen(
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(RoundedCornerShape(10.dp))
+                                        .size(44.dp)
+                                        .clip(RoundedCornerShape(12.dp))
                                         .background(color.copy(alpha = 0.15f)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(
-                                        Icons.Default.Category,
-                                        contentDescription = null,
-                                        tint = color,
-                                        modifier = Modifier.size(22.dp)
-                                    )
+                                    Text(categoria.emoji, fontSize = 22.sp)
                                 }
                                 Spacer(modifier = Modifier.width(14.dp))
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(nombre, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                                    Text(categoria.nombre, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                                     Text("$conteo productos", fontSize = 12.sp, color = TextSecondary)
                                 }
-                                Box(
-                                    modifier = Modifier
-                                        .size(10.dp)
-                                        .clip(CircleShape)
-                                        .background(color)
-                                )
+                                Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(color))
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(20.dp))
                             }

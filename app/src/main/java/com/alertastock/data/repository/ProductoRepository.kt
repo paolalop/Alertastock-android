@@ -81,6 +81,36 @@ class ProductoRepository(private val productoDao: ProductoDao) {
         } catch (e: Exception) {}
     }
 
+    suspend fun renombrarCategoria(categoriaAnterior: String, nuevaCategoria: String) {
+        // Actualiza en Room
+        productoDao.renombrarCategoria(categoriaAnterior, nuevaCategoria)
+        // Actualiza en Firestore — busca todos los productos con esa categoría y los actualiza
+        try {
+            val documentos = coleccionProductos
+                .whereEqualTo("categoria", categoriaAnterior)
+                .get()
+                .await()
+            for (doc in documentos) {
+                doc.reference.update("categoria", nuevaCategoria).await()
+            }
+        } catch (e: Exception) {}
+    }
+
+    suspend fun eliminarCategoria(categoria: String) {
+        // Actualiza en Room — deja la categoría vacía
+        productoDao.eliminarCategoria(categoria)
+        // Actualiza en Firestore
+        try {
+            val documentos = coleccionProductos
+                .whereEqualTo("categoria", categoria)
+                .get()
+                .await()
+            for (doc in documentos) {
+                doc.reference.update("categoria", "").await()
+            }
+        } catch (e: Exception) {}
+    }
+
     // Limpia Room para evitar datos de sesión anterior
     suspend fun limpiarProductosLocales() {
         productoDao.limpiarTodos()

@@ -96,6 +96,22 @@ class ProductoViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun renombrarCategoria(categoriaAnterior: String, nuevaCategoria: String) = viewModelScope.launch {
+        try {
+            repository.renombrarCategoria(categoriaAnterior, nuevaCategoria)
+        } catch (e: Exception) {
+            _error.value = "Error al renombrar categoría: ${e.message}"
+        }
+    }
+
+    fun eliminarCategoria(categoria: String) = viewModelScope.launch {
+        try {
+            repository.eliminarCategoria(categoria)
+        } catch (e: Exception) {
+            _error.value = "Error al eliminar categoría: ${e.message}"
+        }
+    }
+
     fun limpiarError() {
         _error.value = null
     }

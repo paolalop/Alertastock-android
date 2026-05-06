@@ -12,15 +12,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.alertastock.data.local.database.AlertaStockDatabase
 import com.alertastock.data.model.Producto
 import com.alertastock.ui.product.ProductoViewModel
 import com.alertastock.ui.theme.*
@@ -34,19 +37,24 @@ private val EMOJIS = listOf(
 @Composable
 fun AgregarEditarProductoScreen(
     productoExistente: Producto? = null,
-    // ✅ Código escaneado para pre-rellenar el campo (viene del escáner)
     codigoInicial: String = "",
     onGuardado: () -> Unit,
     onAtras: () -> Unit,
     viewModel: ProductoViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+    val database = remember { AlertaStockDatabase.getDatabase(context) }
+    val categoriaDao = remember { database.categoriaDao() }
+
+    // ✅ Carga las categorías desde la base de datos
+    val categorias by categoriaDao.obtenerTodas().observeAsState(emptyList())
+
     val esEdicion = productoExistente != null
     val titulo = if (esEdicion) "Editar producto" else "Agregar producto"
 
     var nombre by remember { mutableStateOf(productoExistente?.nombre ?: "") }
     var stockActual by remember { mutableStateOf(productoExistente?.stockActual?.toString() ?: "0") }
     var stockMinimo by remember { mutableStateOf(productoExistente?.stockMinimo?.toString() ?: "1") }
-    // ✅ Si viene del escáner, el código ya está pre-relleno
     var codigoBarras by remember { mutableStateOf(productoExistente?.codigoBarras ?: codigoInicial) }
     var categoria by remember { mutableStateOf(productoExistente?.categoria ?: "") }
     var fechaVencimiento by remember { mutableStateOf(productoExistente?.fechaVencimiento ?: "") }
@@ -54,6 +62,9 @@ fun AgregarEditarProductoScreen(
     var precioVenta by remember { mutableStateOf(productoExistente?.precioVenta?.toString() ?: "") }
     var emojiSeleccionado by remember { mutableStateOf(productoExistente?.emoji ?: "📦") }
     var mostrarSelectorEmoji by remember { mutableStateOf(false) }
+
+    // ✅ Estado del dropdown de categorías
+    var expandedCategoria by remember { mutableStateOf(false) }
 
     var nombreError by remember { mutableStateOf(false) }
     var stockError by remember { mutableStateOf(false) }
@@ -144,7 +155,13 @@ fun AgregarEditarProductoScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             FormLabel("NOMBRE DEL PRODUCTO")
-            FormTextField(value = nombre, onValueChange = { nombre = it; nombreError = false }, placeholder = "Ej: Leche entera 1L", isError = nombreError, errorMessage = "El nombre es obligatorio")
+            FormTextField(
+                value = nombre,
+                onValueChange = { nombre = it; nombreError = false },
+                placeholder = "Ej: Leche entera 1L",
+                isError = nombreError,
+                errorMessage = "El nombre es obligatorio"
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -175,7 +192,6 @@ fun AgregarEditarProductoScreen(
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     FormLabel("CÓDIGO")
-                    // ✅ Si viene del escáner, muestra el código con fondo azul suave
                     FormTextField(
                         value = codigoBarras,
                         onValueChange = { codigoBarras = it },
@@ -183,12 +199,7 @@ fun AgregarEditarProductoScreen(
                         keyboardType = KeyboardType.Number
                     )
                     if (codigoInicial.isNotBlank() && !esEdicion) {
-                        Text(
-                            text = "✓ Código escaneado",
-                            fontSize = 10.sp,
-                            color = Green,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
+                        Text("✓ Código escaneado", fontSize = 10.sp, color = Green, modifier = Modifier.padding(top = 4.dp))
                     }
                 }
             }
@@ -196,17 +207,83 @@ fun AgregarEditarProductoScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             FormLabel("STOCK MÍNIMO (alerta)")
-            FormTextField(value = stockMinimo, onValueChange = { if (it.all { c -> c.isDigit() }) stockMinimo = it }, placeholder = "Ej: 5", keyboardType = KeyboardType.Number)
+            FormTextField(
+                value = stockMinimo,
+                onValueChange = { if (it.all { c -> c.isDigit() }) stockMinimo = it },
+                placeholder = "Ej: 5",
+                keyboardType = KeyboardType.Number
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // ✅ Selector de categoría con dropdown
             FormLabel("CATEGORÍA")
-            FormTextField(value = categoria, onValueChange = { categoria = it }, placeholder = "Ej: Lácteos, Bebidas...")
+            if (categorias.isEmpty()) {
+                // Sin categorías creadas — campo de texto libre
+                FormTextField(
+                    value = categoria,
+                    onValueChange = { categoria = it },
+                    placeholder = "Ej: Lácteos (crea categorías en Configuración)"
+                )
+            } else {
+                // Con categorías — dropdown
+                ExposedDropdownMenuBox(
+                    expanded = expandedCategoria,
+                    onExpandedChange = { expandedCategoria = !expandedCategoria }
+                ) {
+                    OutlinedTextField(
+                        value = if (categoria.isBlank()) "" else {
+                            val cat = categorias.find { it.nombre == categoria }
+                            if (cat != null) "${cat.emoji} ${cat.nombre}" else categoria
+                        },
+                        onValueChange = {},
+                        readOnly = true,
+                        modifier = Modifier.fillMaxWidth().menuAnchor(),
+                        placeholder = { Text("Selecciona una categoría", color = TextHint) },
+                        trailingIcon = {
+                            Icon(
+                                if (expandedCategoria) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                contentDescription = null,
+                                tint = TextSecondary
+                            )
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = formFieldColors()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expandedCategoria,
+                        onDismissRequest = { expandedCategoria = false }
+                    ) {
+                        // Opción vacía
+                        DropdownMenuItem(
+                            text = { Text("Sin categoría", color = TextHint) },
+                            onClick = { categoria = ""; expandedCategoria = false }
+                        )
+                        // Categorías disponibles
+                        categorias.forEach { cat ->
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(cat.emoji, fontSize = 18.sp)
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Text(cat.nombre, color = TextPrimary)
+                                    }
+                                },
+                                onClick = { categoria = cat.nombre; expandedCategoria = false }
+                            )
+                        }
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             FormLabel("FECHA DE VENCIMIENTO")
-            FormTextField(value = fechaVencimiento, onValueChange = { fechaVencimiento = it }, placeholder = "Ej: 2027-03-08  (opcional)")
+            FormTextField(
+                value = fechaVencimiento,
+                onValueChange = { fechaVencimiento = it },
+                placeholder = "Ej: 2027-03-08  (opcional)"
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -231,7 +308,11 @@ fun AgregarEditarProductoScreen(
             ) {
                 Icon(if (esEdicion) Icons.Default.Check else Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = if (esEdicion) "Guardar cambios" else "Guardar producto", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    text = if (esEdicion) "Guardar cambios" else "Guardar producto",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
 
             Spacer(modifier = Modifier.height(40.dp))
@@ -241,7 +322,14 @@ fun AgregarEditarProductoScreen(
 
 @Composable
 private fun FormLabel(text: String) {
-    Text(text = text, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextSecondary, letterSpacing = 0.8.sp, modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp))
+    Text(
+        text = text,
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        color = TextSecondary,
+        letterSpacing = 0.8.sp,
+        modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
+    )
 }
 
 @Composable
