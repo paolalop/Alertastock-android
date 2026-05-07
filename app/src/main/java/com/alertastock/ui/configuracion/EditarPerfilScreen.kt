@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.sp
 import com.alertastock.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
-import kotlinx.coroutines.launch
 
 @Composable
 fun EditarPerfilScreen(
@@ -38,7 +37,12 @@ fun EditarPerfilScreen(
     var mensajeExito by remember { mutableStateOf(false) }
     var mensajeError by remember { mutableStateOf<String?>(null) }
 
-    val scope = rememberCoroutineScope()
+    // Iniciales para el avatar
+    val iniciales = nombre.trim().split(" ")
+        .mapNotNull { it.firstOrNull()?.uppercase() }
+        .take(2)
+        .joinToString("")
+        .ifEmpty { usuario?.email?.first()?.uppercase() ?: "U" }
 
     fun guardar() {
         if (nombre.isBlank()) {
@@ -101,10 +105,7 @@ fun EditarPerfilScreen(
                     colors = CardDefaults.cardColors(containerColor = Green.copy(alpha = 0.12f)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Green, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Perfil actualizado correctamente", color = Green, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
@@ -113,17 +114,21 @@ fun EditarPerfilScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Avatar
+            // Avatar con iniciales
             Box(
                 modifier = Modifier
                     .size(90.dp)
                     .clip(CircleShape)
-                    .background(Blue.copy(alpha = 0.15f)),
+                    .background(Blue),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Person, contentDescription = null, tint = Blue, modifier = Modifier.size(48.dp))
+                Text(
+                    text = iniciales,
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
             }
-            Text("Toca para cambiar foto", fontSize = 11.sp, color = TextHint, modifier = Modifier.padding(top = 6.dp))
 
             Spacer(modifier = Modifier.height(28.dp))
 
@@ -186,7 +191,6 @@ fun EditarPerfilScreen(
                 colors = campoColores()
             )
 
-            // Error
             mensajeError?.let {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(it, color = Red, fontSize = 12.sp)
@@ -194,7 +198,6 @@ fun EditarPerfilScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Botón guardar
             Button(
                 onClick = { guardar() },
                 modifier = Modifier.fillMaxWidth().height(52.dp),

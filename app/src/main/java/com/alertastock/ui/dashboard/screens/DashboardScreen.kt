@@ -59,7 +59,6 @@ fun DashboardScreen(
 
     val hora = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
 
-    // ✅ Saludos desde strings.xml
     val saludoManana = stringResource(R.string.saludo_manana)
     val saludoTarde = stringResource(R.string.saludo_tarde)
     val saludoNoche = stringResource(R.string.saludo_noche)
@@ -131,10 +130,12 @@ fun DashboardScreen(
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
+                            // ✅ Avatar clickeable — navega a configuración
                             Card(
                                 modifier = Modifier.size(44.dp),
                                 shape = RoundedCornerShape(22.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.25f))
+                                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.25f)),
+                                onClick = onConfigurar
                             ) {
                                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                     Text(

@@ -24,12 +24,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.alertastock.data.local.database.AlertaStockDatabase
 import com.alertastock.data.model.Categoria
+import com.alertastock.data.repository.CategoriaRepository
 import com.alertastock.ui.product.ProductoViewModel
 import com.alertastock.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// Emojis disponibles para categorías
 val EMOJIS_CATEGORIA = listOf(
     "🥛", "🥤", "🌾", "🧼", "🍿", "🍞",
     "🥩", "🐟", "🥦", "🍎", "🧃", "🏪",
@@ -54,9 +54,13 @@ fun CategoriasScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val database = remember { AlertaStockDatabase.getDatabase(context) }
-    val categoriaDao = remember { database.categoriaDao() }
+    val categoriaRepository = remember { CategoriaRepository(database.categoriaDao()) }
 
-    val categorias by categoriaDao.obtenerTodas().observeAsState(emptyList())
+    LaunchedEffect(Unit) {
+        categoriaRepository.sincronizarDesdeFirestore()
+    }
+
+    val categorias by categoriaRepository.todasLasCategorias.observeAsState(emptyList())
     val todosLosProductos by viewModel.todosLosProductos.observeAsState(emptyList())
 
     var mostrarFormulario by remember { mutableStateOf(false) }
@@ -83,7 +87,7 @@ fun CategoriasScreen(
             title = { Text("¿Eliminar Categoría?", color = TextPrimary, fontWeight = FontWeight.Bold) },
             text = {
                 Text(
-                    "¿Estás seguro que deseas eliminar \"${categoria.nombre}\"? Si la eliminas, ya no aparecerá en el listado de categorías.",
+                    "¿Estás seguro que deseas eliminar \"${categoria.nombre}\"?${if (conteo > 0) " Se quitará la categoría de $conteo productos." else ""}",
                     color = TextSecondary
                 )
             },
@@ -91,9 +95,7 @@ fun CategoriasScreen(
                 Button(
                     onClick = {
                         scope.launch {
-                            // ✅ Elimina de la tabla de categorías
-                            categoriaDao.eliminar(categoria)
-                            // ✅ Limpia la categoría de los productos que la tengan
+                            categoriaRepository.eliminar(categoria)
                             viewModel.eliminarCategoria(categoria.nombre)
                             mensajeExito = "Categoría eliminada"
                             mostrarEliminar = null
@@ -136,6 +138,7 @@ fun CategoriasScreen(
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
                 )
+
                 if (categoriaEnEdicion != null) {
                     val conteo = todosLosProductos.count { it.categoria == categoriaEnEdicion?.nombre }
                     Card(
@@ -175,7 +178,7 @@ fun CategoriasScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Selector de ícono (emoji)
+                // Selector de ícono
                 Text("ÍCONO", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextSecondary, letterSpacing = 0.8.sp)
                 Spacer(modifier = Modifier.height(10.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -184,10 +187,7 @@ fun CategoriasScreen(
                             modifier = Modifier
                                 .size(44.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(
-                                    if (emojiSeleccionado == emoji) Blue.copy(alpha = 0.15f)
-                                    else BgInput
-                                )
+                                .background(if (emojiSeleccionado == emoji) Blue.copy(alpha = 0.15f) else BgInput)
                                 .clickable { emojiSeleccionado = emoji },
                             contentAlignment = Alignment.Center
                         ) {
@@ -199,7 +199,6 @@ fun CategoriasScreen(
                 Spacer(modifier = Modifier.height(28.dp))
 
                 if (categoriaEnEdicion != null) {
-                    // Edición
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Button(
                             onClick = {
@@ -210,9 +209,9 @@ fun CategoriasScreen(
                                             nombre = nombreCategoria.trim(),
                                             emoji = emojiSeleccionado
                                         )
-                                        // ✅ Actualiza en la tabla de categorías
-                                        categoriaDao.actualizar(categoriaActualizada)
-                                        // ✅ Renombra en todos los productos si cambió el nombre
+                                        // ✅ Pasa el nombre anterior para borrar el doc viejo en Firestore
+                                        categoriaRepository.actualizar(categoriaActualizada, nombreAnterior)
+                                        // ✅ Renombra en productos si cambió el nombre
                                         if (nombreAnterior != nombreCategoria.trim()) {
                                             viewModel.renombrarCategoria(nombreAnterior, nombreCategoria.trim())
                                         }
@@ -233,10 +232,7 @@ fun CategoriasScreen(
                             Text("Guardar", fontWeight = FontWeight.Bold, color = Color.White)
                         }
                         Button(
-                            onClick = {
-                                mostrarEliminar = categoriaEnEdicion
-                                mostrarFormulario = false
-                            },
+                            onClick = { mostrarEliminar = categoriaEnEdicion; mostrarFormulario = false },
                             modifier = Modifier.weight(1f).height(52.dp),
                             shape = RoundedCornerShape(14.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Red)
@@ -252,15 +248,13 @@ fun CategoriasScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("Cancelar", color = TextSecondary) }
                 } else {
-                    // Nueva categoría
                     Button(
                         onClick = {
                             if (nombreCategoria.isNotBlank()) {
                                 scope.launch {
-                                    // ✅ Verifica que no exista ya
-                                    val existente = categoriaDao.buscarPorNombre(nombreCategoria.trim())
+                                    val existente = database.categoriaDao().buscarPorNombre(nombreCategoria.trim())
                                     if (existente == null) {
-                                        categoriaDao.insertar(
+                                        categoriaRepository.insertar(
                                             Categoria(nombre = nombreCategoria.trim(), emoji = emojiSeleccionado)
                                         )
                                         mensajeExito = "Categoría agregada correctamente"
@@ -316,7 +310,6 @@ fun CategoriasScreen(
                 .background(BgScreen)
                 .padding(paddingValues)
         ) {
-            // Header
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -331,12 +324,8 @@ fun CategoriasScreen(
                 }
             }
 
-            // Banner éxito
             mensajeExito?.let { msg ->
-                LaunchedEffect(msg) {
-                    delay(2500)
-                    mensajeExito = null
-                }
+                LaunchedEffect(msg) { delay(2500); mensajeExito = null }
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                     colors = CardDefaults.cardColors(

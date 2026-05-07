@@ -86,4 +86,5 @@ dependencies {
     implementation("com.google.guava:guava:31.1-android")
 
     implementation("com.google.firebase:firebase-messaging-ktx")
+
 }

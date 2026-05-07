@@ -27,6 +27,7 @@ import com.alertastock.data.local.database.AlertaStockDatabase
 import com.alertastock.data.model.Producto
 import com.alertastock.ui.product.ProductoViewModel
 import com.alertastock.ui.theme.*
+import com.alertastock.data.repository.CategoriaRepository
 
 private val EMOJIS = listOf(
     "📦", "🥛", "🍞", "🥤", "☕", "🧃", "🧴", "🧹",
@@ -44,10 +45,14 @@ fun AgregarEditarProductoScreen(
 ) {
     val context = LocalContext.current
     val database = remember { AlertaStockDatabase.getDatabase(context) }
-    val categoriaDao = remember { database.categoriaDao() }
+    val categoriaRepository = remember { CategoriaRepository(database.categoriaDao()) }
 
-    // ✅ Carga las categorías desde la base de datos
-    val categorias by categoriaDao.obtenerTodas().observeAsState(emptyList())
+// ✅ Sincroniza categorías desde Firestore al abrir el formulario
+    LaunchedEffect(Unit) {
+        categoriaRepository.sincronizarDesdeFirestore()
+    }
+
+    val categorias by categoriaRepository.todasLasCategorias.observeAsState(emptyList())
 
     val esEdicion = productoExistente != null
     val titulo = if (esEdicion) "Editar producto" else "Agregar producto"
