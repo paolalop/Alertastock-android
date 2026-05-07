@@ -49,4 +49,7 @@ interface ProductoDao {
     // ✅ Borra todos los productos locales para limpiar al cambiar de sesión
     @Query("DELETE FROM productos")
     suspend fun limpiarTodos()
+
+    @Query("SELECT * FROM productos")
+    suspend fun obtenerTodosSync(): List<Producto>
 }

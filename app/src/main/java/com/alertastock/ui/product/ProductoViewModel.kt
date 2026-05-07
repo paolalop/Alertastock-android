@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.alertastock.ui.NotificacionHelper
 
 class ProductoViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -33,8 +34,9 @@ class ProductoViewModel(application: Application) : AndroidViewModel(application
     init {
         val dao = AlertaStockDatabase.getDatabase(application).productoDao()
         repository = ProductoRepository(dao)
+        // ✅ Crea los canales de notificación al iniciar
+        NotificacionHelper.crearCanales(application)
     }
-
     fun insertar(producto: Producto) = viewModelScope.launch {
         try {
             _cargando.value = true
@@ -86,9 +88,15 @@ class ProductoViewModel(application: Application) : AndroidViewModel(application
     fun sincronizar() = viewModelScope.launch {
         try {
             _cargando.value = true
-            // ✅ Limpia Room primero para evitar datos de sesión anterior
             repository.limpiarProductosLocales()
             repository.sincronizarDesdeFirestore()
+
+            // ✅ Notifica productos críticos y por vencer
+            val productos = repository.obtenerTodosSync()
+            val criticos = productos.filter { it.stockActual <= it.stockMinimo }
+            val porVencer = productos.filter { it.estaVenciendo }
+            NotificacionHelper.notificarStockCritico(getApplication(), criticos)
+            NotificacionHelper.notificarPorVencer(getApplication(), porVencer)
         } catch (e: Exception) {
             _error.value = "Error al sincronizar: ${e.message}"
         } finally {

@@ -111,6 +111,10 @@ class ProductoRepository(private val productoDao: ProductoDao) {
         } catch (e: Exception) {}
     }
 
+    suspend fun obtenerTodosSync(): List<Producto> {
+        return productoDao.obtenerTodosSync()
+    }
+
     // Limpia Room para evitar datos de sesión anterior
     suspend fun limpiarProductosLocales() {
         productoDao.limpiarTodos()
@@ -151,4 +155,6 @@ fun Producto.toMap(): Map<String, Any> = mapOf(
     "codigoBarras" to codigoBarras,
     "fechaVencimiento" to fechaVencimiento,
     "emoji" to emoji
+
+
 )
