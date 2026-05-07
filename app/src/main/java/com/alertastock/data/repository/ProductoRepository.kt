@@ -8,41 +8,31 @@ import kotlinx.coroutines.tasks.await
 
 class ProductoRepository(private val productoDao: ProductoDao) {
 
-    // Instancias de Firebase
     private val firestore = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
-    // Colección de productos del usuario actual
+    // ✅ Ruta por usuario — cada usuario lee y escribe en su propia colección
     private val coleccionProductos
         get() = firestore
             .collection("usuarios")
             .document(auth.currentUser?.uid ?: "unknown")
             .collection("productos")
 
-    // LiveData locales — la UI los observa
     val todosLosProductos = productoDao.obtenerTodos()
     val productosCriticos = productoDao.obtenerCriticos()
 
     fun buscar(texto: String) = productoDao.buscar(texto)
 
-    // INSERTAR — guarda en Room y en Firestore
     suspend fun insertar(producto: Producto) {
-        // 1. Guardar en Room (local)
         productoDao.insertar(producto)
-
-        // 2. Guardar en Firestore (nube)
         try {
-            val mapa = producto.toMap()
             coleccionProductos
                 .document(producto.codigoBarras.ifEmpty { producto.nombre })
-                .set(mapa)
+                .set(producto.toMap())
                 .await()
-        } catch (e: Exception) {
-            // Si falla Firestore, Room ya lo guardó
-        }
+        } catch (e: Exception) {}
     }
 
-    // ACTUALIZAR — actualiza en Room y en Firestore
     suspend fun actualizar(producto: Producto) {
         productoDao.actualizar(producto)
         try {
@@ -53,7 +43,6 @@ class ProductoRepository(private val productoDao: ProductoDao) {
         } catch (e: Exception) {}
     }
 
-    // ELIMINAR — elimina en Room y en Firestore
     suspend fun eliminar(producto: Producto) {
         productoDao.eliminar(producto)
         try {
@@ -69,22 +58,80 @@ class ProductoRepository(private val productoDao: ProductoDao) {
     }
 
     suspend fun descontarStock(id: Int, cantidad: Int) {
+        // Paso 1: descontar en Room
         productoDao.descontarStock(id, cantidad)
+        // Paso 2: obtener producto actualizado y sincronizar con Firestore
+        try {
+            val productoActualizado = productoDao.obtenerPorId(id) ?: return
+            coleccionProductos
+                .document(productoActualizado.codigoBarras.ifEmpty { productoActualizado.nombre })
+                .update("stockActual", productoActualizado.stockActual)
+                .await()
+        } catch (e: Exception) {}
     }
 
-    // SINCRONIZAR — trae productos de Firestore a Room
+    suspend fun actualizarStockMinimo(producto: Producto, nuevoMinimo: Int) {
+        val actualizado = producto.copy(stockMinimo = nuevoMinimo)
+        productoDao.actualizar(actualizado)
+        try {
+            coleccionProductos
+                .document(producto.codigoBarras.ifEmpty { producto.nombre })
+                .set(actualizado.toMap())
+                .await()
+        } catch (e: Exception) {}
+    }
+
+    suspend fun renombrarCategoria(categoriaAnterior: String, nuevaCategoria: String) {
+        // Actualiza en Room
+        productoDao.renombrarCategoria(categoriaAnterior, nuevaCategoria)
+        // Actualiza en Firestore — busca todos los productos con esa categoría y los actualiza
+        try {
+            val documentos = coleccionProductos
+                .whereEqualTo("categoria", categoriaAnterior)
+                .get()
+                .await()
+            for (doc in documentos) {
+                doc.reference.update("categoria", nuevaCategoria).await()
+            }
+        } catch (e: Exception) {}
+    }
+
+    suspend fun eliminarCategoria(categoria: String) {
+        // Actualiza en Room — deja la categoría vacía
+        productoDao.eliminarCategoria(categoria)
+        // Actualiza en Firestore
+        try {
+            val documentos = coleccionProductos
+                .whereEqualTo("categoria", categoria)
+                .get()
+                .await()
+            for (doc in documentos) {
+                doc.reference.update("categoria", "").await()
+            }
+        } catch (e: Exception) {}
+    }
+
+    // Limpia Room para evitar datos de sesión anterior
+    suspend fun limpiarProductosLocales() {
+        productoDao.limpiarTodos()
+    }
+
     suspend fun sincronizarDesdeFirestore() {
         try {
             val documentos = coleccionProductos.get().await()
             for (doc in documentos) {
+                val codigoBarras = doc.getString("codigoBarras") ?: ""
+                val nombre = doc.getString("nombre") ?: ""
+                val existente = productoDao.buscarPorCodigo(codigoBarras)
                 val producto = Producto(
-                    nombre = doc.getString("nombre") ?: "",
+                    id = existente?.id ?: 0,
+                    nombre = nombre,
                     categoria = doc.getString("categoria") ?: "",
                     stockActual = (doc.getLong("stockActual") ?: 0).toInt(),
                     stockMinimo = (doc.getLong("stockMinimo") ?: 0).toInt(),
                     precioCompra = doc.getDouble("precioCompra") ?: 0.0,
                     precioVenta = doc.getDouble("precioVenta") ?: 0.0,
-                    codigoBarras = doc.getString("codigoBarras") ?: "",
+                    codigoBarras = codigoBarras,
                     fechaVencimiento = doc.getString("fechaVencimiento") ?: "",
                     emoji = doc.getString("emoji") ?: "📦"
                 )
@@ -94,7 +141,6 @@ class ProductoRepository(private val productoDao: ProductoDao) {
     }
 }
 
-// Extensión para convertir Producto a Map para Firestore
 fun Producto.toMap(): Map<String, Any> = mapOf(
     "nombre" to nombre,
     "categoria" to categoria,

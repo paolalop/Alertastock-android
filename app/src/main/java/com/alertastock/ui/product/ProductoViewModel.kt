@@ -18,19 +18,15 @@ class ProductoViewModel(application: Application) : AndroidViewModel(application
 
     private val repository: ProductoRepository
 
-    // LiveData from repository — observed by UI
     val todosLosProductos by lazy { repository.todosLosProductos }
     val productosCriticos by lazy { repository.productosCriticos }
 
-    // Selected product for edit screen (null = adding new)
     var productoSeleccionado: Producto? by mutableStateOf(null)
         private set
 
-    // Loading state
     private val _cargando = MutableStateFlow(false)
     val cargando: StateFlow<Boolean> = _cargando.asStateFlow()
 
-    // Error state
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
@@ -69,6 +65,14 @@ class ProductoViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun descontarStock(id: Int, cantidad: Int) = viewModelScope.launch {
+        try {
+            repository.descontarStock(id, cantidad)
+        } catch (e: Exception) {
+            _error.value = "Error al descontar stock: ${e.message}"
+        }
+    }
+
     fun buscar(texto: String) = repository.buscar(texto)
 
     fun seleccionarProducto(producto: Producto) {
@@ -82,11 +86,29 @@ class ProductoViewModel(application: Application) : AndroidViewModel(application
     fun sincronizar() = viewModelScope.launch {
         try {
             _cargando.value = true
+            // ✅ Limpia Room primero para evitar datos de sesión anterior
+            repository.limpiarProductosLocales()
             repository.sincronizarDesdeFirestore()
         } catch (e: Exception) {
             _error.value = "Error al sincronizar: ${e.message}"
         } finally {
             _cargando.value = false
+        }
+    }
+
+    fun renombrarCategoria(categoriaAnterior: String, nuevaCategoria: String) = viewModelScope.launch {
+        try {
+            repository.renombrarCategoria(categoriaAnterior, nuevaCategoria)
+        } catch (e: Exception) {
+            _error.value = "Error al renombrar categoría: ${e.message}"
+        }
+    }
+
+    fun eliminarCategoria(categoria: String) = viewModelScope.launch {
+        try {
+            repository.eliminarCategoria(categoria)
+        } catch (e: Exception) {
+            _error.value = "Error al eliminar categoría: ${e.message}"
         }
     }
 

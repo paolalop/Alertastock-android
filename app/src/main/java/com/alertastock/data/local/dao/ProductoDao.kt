@@ -6,6 +6,7 @@ import com.alertastock.data.model.Producto
 
 @Dao
 interface ProductoDao {
+
     @Query("SELECT * FROM productos ORDER BY nombre ASC")
     fun obtenerTodos(): LiveData<List<Producto>>
 
@@ -22,6 +23,17 @@ interface ProductoDao {
     @Query("SELECT * FROM productos WHERE codigoBarras = :codigo LIMIT 1")
     suspend fun buscarPorCodigo(codigo: String): Producto?
 
+    @Query("SELECT * FROM productos WHERE id = :id LIMIT 1")
+    suspend fun obtenerPorId(id: Int): Producto?
+
+    // Renombra la categoría en todos los productos que la tengan
+    @Query("UPDATE productos SET categoria = :nuevaCategoria WHERE categoria = :categoriaAnterior")
+    suspend fun renombrarCategoria(categoriaAnterior: String, nuevaCategoria: String)
+
+    // Elimina la categoría de todos los productos que la tengan (deja el campo vacío)
+    @Query("UPDATE productos SET categoria = '' WHERE categoria = :categoria")
+    suspend fun eliminarCategoria(categoria: String)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertar(producto: Producto)
 
@@ -33,4 +45,8 @@ interface ProductoDao {
 
     @Query("UPDATE productos SET stockActual = stockActual - :cantidad WHERE id = :id")
     suspend fun descontarStock(id: Int, cantidad: Int)
+
+    // ✅ Borra todos los productos locales para limpiar al cambiar de sesión
+    @Query("DELETE FROM productos")
+    suspend fun limpiarTodos()
 }
