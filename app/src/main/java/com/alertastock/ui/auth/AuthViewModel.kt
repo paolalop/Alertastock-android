@@ -4,6 +4,8 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.alertastock.utils.AppConstants
+import com.alertastock.utils.PasswordConstants
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.launch
@@ -47,7 +49,7 @@ class AuthViewModel : ViewModel() {
             _estado.value = AuthEstado.Error(AuthError.CONTRASENA_VACIA)
             return
         }
-        if (contrasena.length < 6) {
+        if (contrasena.length < PasswordConstants.MIN_LENGTH_LOGIN) {
             _estado.value = AuthEstado.Error(AuthError.CONTRASENA_CORTA)
             return
         }
@@ -97,7 +99,7 @@ class AuthViewModel : ViewModel() {
             _estado.value = AuthEstado.Error(AuthError.CONTRASENA_VACIA)
             return
         }
-        if (contrasena.length < 8) {
+        if (contrasena.length < PasswordConstants.MIN_LENGTH_REGISTER) {
             _estado.value = AuthEstado.Error(AuthError.CONTRASENA_CORTA)
             return
         }
@@ -191,7 +193,7 @@ class AuthViewModel : ViewModel() {
     }
 
     fun validarContrasena(contrasena: String) {
-        _contrasenaValida.value = contrasena.length >= 6
+        _contrasenaValida.value = contrasena.length >= PasswordConstants.MIN_LENGTH_LOGIN
     }
 
     fun resetearEstado() {

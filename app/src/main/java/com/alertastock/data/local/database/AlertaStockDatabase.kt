@@ -12,15 +12,15 @@ import com.alertastock.data.model.Producto
 import com.alertastock.data.model.Venta
 
 @Database(
-    entities = [Producto::class, Venta::class, Categoria::class],  // ✅ agregamos Categoria
-    version = 3,                                                     // ✅ subimos a versión 3
-    exportSchema = false
+    entities = [Producto::class, Venta::class, Categoria::class],
+    version = DatabaseConfig.VERSION,
+    exportSchema = DatabaseConfig.EXPORT_SCHEMA
 )
 abstract class AlertaStockDatabase : RoomDatabase() {
 
     abstract fun productoDao(): ProductoDao
     abstract fun ventaDao(): VentaDao
-    abstract fun categoriaDao(): CategoriaDao  // ✅ nuevo DAO
+    abstract fun categoriaDao(): CategoriaDao
 
     companion object {
 
@@ -32,7 +32,7 @@ abstract class AlertaStockDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AlertaStockDatabase::class.java,
-                    "alertastock_database"
+                    DatabaseConfig.NAME
                 )
                     .fallbackToDestructiveMigration()
                     .build()

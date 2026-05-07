@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.alertastock.R
 import com.alertastock.data.model.Producto
 import com.alertastock.ui.components.AlertaStockBottomBar
 import com.alertastock.ui.components.BottomNavDestino
@@ -132,14 +134,14 @@ fun ScannerScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = onAtras) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Atrás", tint = Color.White)
+                            Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.btn_atras), tint = Color.White)
                         }
-                        Text("Escanear producto", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.weight(1f))
+                        Text(stringResource(R.string.scanner_titulo), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.weight(1f))
                         if (estado is EstadoEscaner.Escaneando) {
                             IconButton(onClick = { linternaActiva = !linternaActiva; camaraControl?.cameraControl?.enableTorch(linternaActiva) }) {
                                 Icon(
                                     if (linternaActiva) Icons.Default.FlashOn else Icons.Default.FlashOff,
-                                    contentDescription = "Linterna",
+                                    contentDescription = stringResource(R.string.scanner_linterna),
                                     tint = if (linternaActiva) Color.Yellow else Color.White
                                 )
                             }

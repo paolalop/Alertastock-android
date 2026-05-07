@@ -38,6 +38,8 @@
     <string name="registro_subtitulo">Ingresa tus datos para registrarte</string>
     <string name="label_nombre">Nombre completo</string>
     <string name="label_negocio">Nombre del negocio</string>
+    <string name="label_correo_electronico">Correo electrónico</string>
+    <string name="label_contrasena_registro">Contraseña</string>
     <string name="btn_crear_cuenta">Crear cuenta</string>
     <string name="txt_terminos">Al registrarte aceptas los Términos y condiciones</string>
     <string name="fortaleza_fuerte">Contraseña fuerte</string>
@@ -86,4 +88,8 @@
     <string name="saludo_manana">Buenos días,</string>
     <string name="saludo_tarde">Buenas tardes,</string>
     <string name="saludo_noche">Buenas noches,</string>
+
+    <!-- Scanner -->
+    <string name="scanner_titulo">Escanear producto</string>
+    <string name="scanner_linterna">Linterna</string>
 </resources>

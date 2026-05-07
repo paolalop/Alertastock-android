@@ -27,6 +27,7 @@ import com.alertastock.ui.auth.AuthError
 import com.alertastock.ui.auth.AuthEstado
 import com.alertastock.ui.auth.AuthViewModel
 import com.alertastock.ui.theme.*
+import com.alertastock.utils.PasswordConstants
 
 @Composable
 fun RegistroScreen(
@@ -54,67 +55,67 @@ fun RegistroScreen(
             .fillMaxSize()
             .background(BgScreen)
             .verticalScroll(rememberScrollState())
-            .padding(24.dp)
+            .padding(Dimensions.Padding.xxl)
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Dimensions.Size.spacerLarge))
 
         IconButton(onClick = onAtras) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Atras", tint = TextPrimary)
+            Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.btn_atras), tint = TextPrimary)
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Dimensions.Size.spacerLarge))
 
-        Text(text = "Crear cuenta", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+        Text(text = stringResource(R.string.registro_titulo), fontSize = Dimensions.Typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
 
-        Text(text = "Ingresa tus datos para registrarte", fontSize = 13.sp, color = TextSecondary, modifier = Modifier.padding(top = 4.dp))
+        Text(text = stringResource(R.string.registro_subtitulo), fontSize = Dimensions.Typography.bodySmall, color = TextSecondary, modifier = Modifier.padding(top = Dimensions.Padding.xs))
 
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(Dimensions.Size.spacerMassive))
 
         // Campo Nombre
         OutlinedTextField(
             value = nombre,
             onValueChange = { nombre = it },
-            label = { Text("Nombre completo") },
+            label = { Text(stringResource(R.string.label_nombre)) },
             leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = TextHint) },
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(Dimensions.CornerRadius.lg),
             colors = camposColores()
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(Dimensions.Size.spacerMedium))
 
         // Campo Negocio
         OutlinedTextField(
             value = negocio,
             onValueChange = { negocio = it },
-            label = { Text("Nombre del negocio") },
+            label = { Text(stringResource(R.string.label_negocio)) },
             leadingIcon = { Icon(Icons.Default.Store, contentDescription = null, tint = TextHint) },
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(Dimensions.CornerRadius.lg),
             colors = camposColores()
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(Dimensions.Size.spacerMedium))
 
         // Campo Email
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Correo electronico") },
+            label = { Text(stringResource(R.string.label_correo_electronico)) },
             leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = TextHint) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(Dimensions.CornerRadius.lg),
             colors = camposColores()
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(Dimensions.Size.spacerMedium))
 
         // Campo Contraseña
         OutlinedTextField(
             value = contrasena,
             onValueChange = { contrasena = it },
-            label = { Text("Contrasena") },
+            label = { Text(stringResource(R.string.label_contrasena_registro)) },
             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = TextHint) },
             trailingIcon = {
                 IconButton(onClick = { mostrarContrasena = !mostrarContrasena }) {
@@ -127,21 +128,26 @@ fun RegistroScreen(
             visualTransformation = if (mostrarContrasena) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(Dimensions.CornerRadius.lg),
             colors = camposColores()
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Dimensions.Size.spacerLarge))
 
         // Indicador fortaleza
-        val fortaleza = when {
-            contrasena.length >= 8 && contrasena.any { it.isUpperCase() } && contrasena.any { it.isDigit() } -> 3
-            contrasena.length >= 6 -> 2
-            contrasena.isNotEmpty() -> 1
-            else -> 0
+        val fortaleza = PasswordConstants.evaluateStrength(contrasena)
+        val colorFortaleza = when (fortaleza) {
+            PasswordConstants.STRENGTH_STRONG -> Green
+            PasswordConstants.STRENGTH_MEDIUM -> Yellow
+            PasswordConstants.STRENGTH_WEAK -> Red
+            else -> BorderMedium
         }
-        val colorFortaleza = when (fortaleza) { 3 -> Green; 2 -> Yellow; 1 -> Red; else -> BorderMedium }
-        val textoFortaleza = when (fortaleza) { 3 -> "Contrasena fuerte"; 2 -> "Contrasena media"; 1 -> "Contrasena debil"; else -> "Ingresa una contrasena" }
+        val textoFortaleza = when (fortaleza) {
+            PasswordConstants.STRENGTH_STRONG -> stringResource(R.string.fortaleza_fuerte)
+            PasswordConstants.STRENGTH_MEDIUM -> stringResource(R.string.fortaleza_media)
+            PasswordConstants.STRENGTH_WEAK -> stringResource(R.string.fortaleza_debil)
+            else -> stringResource(R.string.fortaleza_vacia)
+        }
 
         LinearProgressIndicator(
             progress = { fortaleza / 3f },
@@ -150,42 +156,42 @@ fun RegistroScreen(
             trackColor = BorderMedium
         )
 
-        Text(text = textoFortaleza, color = colorFortaleza, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+        Text(text = textoFortaleza, color = colorFortaleza, fontSize = Dimensions.Typography.bodyTiny, modifier = Modifier.padding(top = Dimensions.Padding.xs))
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Dimensions.Size.spacerLarge))
 
-        Text(text = "Al registrarte aceptas los Terminos y condiciones", color = TextSecondary, fontSize = 11.sp)
+        Text(text = stringResource(R.string.txt_terminos), color = TextSecondary, fontSize = Dimensions.Typography.bodyTiny)
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(Dimensions.Size.spacerXLarge))
 
         // Botón Registrarse
         Button(
             onClick = { viewModel.registrar(nombre, email, contrasena) },
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth().height(Dimensions.Size.buttonDefault),
+            shape = RoundedCornerShape(Dimensions.CornerRadius.lg),
             colors = ButtonDefaults.buttonColors(containerColor = Green),
             enabled = estado !is AuthEstado.Cargando
         ) {
             if (estado is AuthEstado.Cargando) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(Dimensions.Size.iconMedium))
             } else {
-                Text(text = "Crear cuenta", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(text = stringResource(R.string.btn_crear_cuenta), fontSize = Dimensions.Typography.bodyLarge, fontWeight = FontWeight.Bold, color = Color.White)
             }
         }
 
         // Error
         if (estado is AuthEstado.Error) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Dimensions.Size.spacerSmall))
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = Red.copy(alpha = 0.15f)),
-                shape = RoundedCornerShape(10.dp)
+                shape = RoundedCornerShape(Dimensions.CornerRadius.md)
             ) {
                 Text(
                     text = mensajeDeError((estado as AuthEstado.Error).mensaje),
                     color = Red,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(12.dp)
+                    fontSize = Dimensions.Typography.bodyExtraSmall,
+                    modifier = Modifier.padding(Dimensions.Padding.md)
                 )
             }
         }
